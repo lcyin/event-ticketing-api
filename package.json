@@ -12,7 +12,10 @@
         "typeorm": "typeorm-ts-node-commonjs",
         "migration:generate": "npm run typeorm migration:generate -- -d src/config/database.ts",
         "migration:run": "npm run typeorm migration:run -- -d src/config/database.ts",
-        "migration:revert": "npm run typeorm migration:revert -- -d src/config/database.ts"
+        "migration:revert": "npm run typeorm migration:revert -- -d src/config/database.ts",
+        "test:migration:generate": "npm run typeorm migration:generate -- -d src/config/test-database.ts",
+        "test:migration:run": "npm run typeorm migration:run -- -d src/config/test-database.ts",
+        "test:migration:revert": "npm run typeorm migration:revert -- -d src/config/test-database.ts"
     },
     "dependencies": {
         "class-transformer": "^0.5.1",
