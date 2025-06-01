@@ -5,7 +5,7 @@ export class CreateTicketTypesTable1709123456790 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-            CREATE TABLE "ticket_types" (
+            CREATE TABLE "ticket_type" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "name" character varying NOT NULL,
                 "price" decimal(10,2) NOT NULL,
@@ -15,14 +15,14 @@ export class CreateTicketTypesTable1709123456790 implements MigrationInterface {
                 "created_at" TIMESTAMP NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
                 "event_id" uuid,
-                CONSTRAINT "PK_ticket_types" PRIMARY KEY ("id"),
-                CONSTRAINT "FK_ticket_types_event" FOREIGN KEY ("event_id") 
-                    REFERENCES "events"("id") ON DELETE CASCADE
+                CONSTRAINT "PK_ticket_type" PRIMARY KEY ("id"),
+                CONSTRAINT "FK_ticket_type_event" FOREIGN KEY ("event_id") 
+                    REFERENCES "event"("id") ON DELETE CASCADE
             )
         `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE "ticket_types"`);
+    await queryRunner.query(`DROP TABLE "ticket_type"`);
   }
 }

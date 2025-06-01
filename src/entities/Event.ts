@@ -1,10 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { TicketType } from './TicketType';
-import { FAQ } from './FAQ';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { TicketType } from "./TicketType";
+import { FAQ } from "./FAQ";
 
-@Entity('events')
+@Entity()
 export class Event {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -13,16 +20,16 @@ export class Event {
   @Column({ nullable: true })
   description: string;
 
-  @Column({ nullable: true, name: 'long_description' })
+  @Column({ nullable: true, name: "long_description" })
   longDescription: string;
 
   @Column()
   date: string;
 
-  @Column({ nullable: true, name: 'start_time' })
+  @Column({ nullable: true, name: "start_time" })
   startTime: string;
 
-  @Column({ nullable: true, name: 'end_time' })
+  @Column({ nullable: true, name: "end_time" })
   endTime: string;
 
   @Column()
@@ -40,27 +47,27 @@ export class Event {
   @Column()
   image: string;
 
-  @Column({ nullable: true, name: 'image_url' })
+  @Column({ nullable: true, name: "image_url" })
   imageUrl: string;
 
-  @Column({ name: 'price_range' })
+  @Column({ name: "price_range" })
   priceRange: string;
 
   @Column()
   category: string;
 
-  @Column('simple-array', { nullable: true })
+  @Column("simple-array", { nullable: true })
   categories: string[];
 
-  @OneToMany(() => TicketType, ticketType => ticketType.event)
+  @OneToMany(() => TicketType, (ticketType) => ticketType.event)
   ticketTypes: TicketType[];
 
-  @OneToMany(() => FAQ, faq => faq.event)
+  @OneToMany(() => FAQ, (faq) => faq.event)
   faqs: FAQ[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
-} 
+}

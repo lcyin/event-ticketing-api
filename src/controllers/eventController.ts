@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { AppDataSource } from '../config/database';
-import { Event } from '../entities/Event';
+import { Request, Response } from "express";
+import { AppDataSource } from "../config/database";
+import { Event } from "../entities/Event";
 
 const eventRepository = AppDataSource.getRepository(Event);
 
@@ -9,11 +9,11 @@ export const eventController = {
   async getAllEvents(req: Request, res: Response) {
     try {
       const events = await eventRepository.find({
-        relations: ['ticketTypes', 'faqs'],
+        relations: ["ticketTypes", "faqs"],
       });
       res.json(events);
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching events', error });
+      res.status(500).json({ message: "Error fetching events", error });
     }
   },
 
@@ -22,16 +22,16 @@ export const eventController = {
     try {
       const event = await eventRepository.findOne({
         where: { id: req.params.id },
-        relations: ['ticketTypes', 'faqs'],
+        relations: ["ticketTypes", "faqs"],
       });
 
       if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
+        return res.status(404).json({ message: "Event not found" });
       }
 
       res.json(event);
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching event', error });
+      res.status(500).json({ message: "Error fetching event", error });
     }
   },
 
@@ -42,7 +42,7 @@ export const eventController = {
       const result = await eventRepository.save(event);
       res.status(201).json(result);
     } catch (error) {
-      res.status(500).json({ message: 'Error creating event', error });
+      res.status(500).json({ message: "Error creating event", error });
     }
   },
 
@@ -54,14 +54,14 @@ export const eventController = {
       });
 
       if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
+        return res.status(404).json({ message: "Event not found" });
       }
 
       eventRepository.merge(event, req.body);
       const result = await eventRepository.save(event);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ message: 'Error updating event', error });
+      res.status(500).json({ message: "Error updating event", error });
     }
   },
 
@@ -73,13 +73,13 @@ export const eventController = {
       });
 
       if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
+        return res.status(404).json({ message: "Event not found" });
       }
 
       await eventRepository.remove(event);
       res.status(204).send();
     } catch (error) {
-      res.status(500).json({ message: 'Error deleting event', error });
+      res.status(500).json({ message: "Error deleting event", error });
     }
   },
-}; 
+};

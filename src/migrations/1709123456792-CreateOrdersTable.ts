@@ -5,7 +5,7 @@ export class CreateOrdersTable1709123456792 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-            CREATE TABLE "orders" (
+            CREATE TABLE "order" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "user_id" character varying NOT NULL,
                 "event_name" character varying NOT NULL,
@@ -19,12 +19,12 @@ export class CreateOrdersTable1709123456792 implements MigrationInterface {
                 "status" character varying NOT NULL,
                 "created_at" TIMESTAMP NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
-                CONSTRAINT "PK_orders" PRIMARY KEY ("id")
+                CONSTRAINT "PK_order" PRIMARY KEY ("id")
             )
         `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE "orders"`);
+    await queryRunner.query(`DROP TABLE "order"`);
   }
 }

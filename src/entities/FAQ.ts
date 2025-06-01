@@ -1,9 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Event } from './Event';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { Event } from "./Event";
 
-@Entity('faqs')
+@Entity()
 export class FAQ {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
@@ -12,12 +19,12 @@ export class FAQ {
   @Column()
   answer: string;
 
-  @ManyToOne(() => Event, event => event.faqs)
+  @ManyToOne(() => Event, (event) => event.faqs)
   event: Event;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
-} 
+}

@@ -1,26 +1,32 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
-@Entity('orders')
+@Entity()
 export class Order {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: "user_id" })
   userId: string;
 
-  @Column({ name: 'event_name' })
+  @Column({ name: "event_name" })
   eventName: string;
 
-  @Column({ name: 'event_date' })
+  @Column({ name: "event_date" })
   eventDate: string;
 
-  @Column({ name: 'event_location' })
+  @Column({ name: "event_location" })
   eventLocation: string;
 
-  @Column('jsonb')
+  @Column("jsonb")
   tickets: any[];
 
-  @Column('jsonb', { name: 'customer_info' })
+  @Column("jsonb", { name: "customer_info" })
   customerInfo: {
     firstName: string;
     lastName: string;
@@ -28,7 +34,7 @@ export class Order {
     phone: string;
   };
 
-  @Column('jsonb', { name: 'billing_address' })
+  @Column("jsonb", { name: "billing_address" })
   billingAddress: {
     address: string;
     city: string;
@@ -36,21 +42,21 @@ export class Order {
     zipCode: string;
   };
 
-  @Column('jsonb', { name: 'payment_info' })
+  @Column("jsonb", { name: "payment_info" })
   paymentInfo: {
     lastFour: string;
     cardholderName: string;
   };
 
-  @Column('decimal', { precision: 10, scale: 2, name: 'total_amount' })
+  @Column("decimal", { precision: 10, scale: 2, name: "total_amount" })
   totalAmount: number;
 
   @Column()
   status: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
-} 
+}
