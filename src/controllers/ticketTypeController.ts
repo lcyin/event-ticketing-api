@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
-import { AppDataSource } from '../config/database';
-import { TicketType } from '../entities/TicketType';
-import { Event } from '../entities/Event';
+import { Request, Response } from "express";
+import { getDataSource } from "../config/getDataSource";
+import { TicketType } from "../entities/TicketType";
+import { Event } from "../entities/Event";
 
-const ticketTypeRepository = AppDataSource.getRepository(TicketType);
-const eventRepository = AppDataSource.getRepository(Event);
+const ticketTypeRepository = getDataSource().getRepository(TicketType);
+const eventRepository = getDataSource().getRepository(Event);
 
 export const ticketTypeController = {
   // Get all ticket types for an event
@@ -15,7 +15,7 @@ export const ticketTypeController = {
       });
       res.json(ticketTypes);
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching ticket types', error });
+      res.status(500).json({ message: "Error fetching ticket types", error });
     }
   },
 
@@ -24,16 +24,16 @@ export const ticketTypeController = {
     try {
       const ticketType = await ticketTypeRepository.findOne({
         where: { id: req.params.id },
-        relations: ['event'],
+        relations: ["event"],
       });
 
       if (!ticketType) {
-        return res.status(404).json({ message: 'Ticket type not found' });
+        return res.status(404).json({ message: "Ticket type not found" });
       }
 
       res.json(ticketType);
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching ticket type', error });
+      res.status(500).json({ message: "Error fetching ticket type", error });
     }
   },
 
@@ -45,7 +45,7 @@ export const ticketTypeController = {
       });
 
       if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
+        return res.status(404).json({ message: "Event not found" });
       }
 
       const ticketType = ticketTypeRepository.create({
@@ -56,7 +56,7 @@ export const ticketTypeController = {
       const result = await ticketTypeRepository.save(ticketType);
       res.status(201).json(result);
     } catch (error) {
-      res.status(500).json({ message: 'Error creating ticket type', error });
+      res.status(500).json({ message: "Error creating ticket type", error });
     }
   },
 
@@ -65,18 +65,18 @@ export const ticketTypeController = {
     try {
       const ticketType = await ticketTypeRepository.findOne({
         where: { id: req.params.id },
-        relations: ['event'],
+        relations: ["event"],
       });
 
       if (!ticketType) {
-        return res.status(404).json({ message: 'Ticket type not found' });
+        return res.status(404).json({ message: "Ticket type not found" });
       }
 
       ticketTypeRepository.merge(ticketType, req.body);
       const result = await ticketTypeRepository.save(ticketType);
       res.json(result);
     } catch (error) {
-      res.status(500).json({ message: 'Error updating ticket type', error });
+      res.status(500).json({ message: "Error updating ticket type", error });
     }
   },
 
@@ -88,13 +88,13 @@ export const ticketTypeController = {
       });
 
       if (!ticketType) {
-        return res.status(404).json({ message: 'Ticket type not found' });
+        return res.status(404).json({ message: "Ticket type not found" });
       }
 
       await ticketTypeRepository.remove(ticketType);
       res.status(204).send();
     } catch (error) {
-      res.status(500).json({ message: 'Error deleting ticket type', error });
+      res.status(500).json({ message: "Error deleting ticket type", error });
     }
   },
-}; 
+};

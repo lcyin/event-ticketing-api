@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { AppDataSource } from "../config/database";
+import { getDataSource } from "../config/getDataSource";
 import { Event } from "../entities/Event";
 
-const eventRepository = AppDataSource.getRepository(Event);
+const eventRepository = getDataSource().getRepository(Event);
 
 export const eventController = {
   // Get all events
