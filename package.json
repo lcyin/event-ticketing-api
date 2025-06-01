@@ -1,0 +1,55 @@
+{
+    "name": "event-ticketing-api",
+    "version": "1.0.0",
+    "description": "Backend API service for event ticketing platform",
+    "main": "src/index.ts",
+    "scripts": {
+        "start": "ts-node src/index.ts",
+        "dev": "nodemon src/index.ts",
+        "build": "tsc",
+        "test": "jest --runInBand --detectOpenHandles",
+        "test:watch": "jest --watch",
+        "typeorm": "typeorm-ts-node-commonjs",
+        "migration:generate": "npm run typeorm migration:generate -- -d src/config/database.ts",
+        "migration:run": "npm run typeorm migration:run -- -d src/config/database.ts",
+        "migration:revert": "npm run typeorm migration:revert -- -d src/config/database.ts"
+    },
+    "dependencies": {
+        "class-transformer": "^0.5.1",
+        "class-validator": "^0.14.1",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.1",
+        "express": "^4.18.2",
+        "pg": "^8.11.3",
+        "reflect-metadata": "^0.2.1",
+        "swagger-jsdoc": "^6.2.8",
+        "swagger-ui-express": "^5.0.0",
+        "typeorm": "^0.3.20"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.21",
+        "@types/jest": "^29.5.12",
+        "@types/node": "^20.11.16",
+        "@types/supertest": "^6.0.2",
+        "@types/swagger-jsdoc": "^6.0.4",
+        "@types/swagger-ui-express": "^4.1.6",
+        "jest": "^29.7.0",
+        "nodemon": "^3.0.3",
+        "supertest": "^6.3.4",
+        "ts-jest": "^29.1.2",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3"
+    },
+    "jest": {
+        "preset": "ts-jest",
+        "testEnvironment": "node",
+        "setupFilesAfterEnv": [
+            "<rootDir>/src/tests/setup.ts"
+        ],
+        "testMatch": [
+            "**/tests/**/*.test.ts"
+        ],
+        "verbose": true
+    }
+}
