@@ -10,11 +10,11 @@ export class CreateTicketTypesTable1709123456790 implements MigrationInterface {
                 "name" character varying NOT NULL,
                 "price" decimal(10,2) NOT NULL,
                 "description" character varying,
-                "available" integer NOT NULL,
+                "available_quantity" integer NOT NULL,
                 "max_per_order" integer,
+                "event_id" uuid NOT NULL,
                 "created_at" TIMESTAMP NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
-                "event_id" uuid,
                 CONSTRAINT "PK_ticket_type" PRIMARY KEY ("id"),
                 CONSTRAINT "FK_ticket_type_event" FOREIGN KEY ("event_id") 
                     REFERENCES "event"("id") ON DELETE CASCADE
