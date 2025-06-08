@@ -7,6 +7,7 @@ import { AppDataSource } from "./config/database";
 import dotenv from "dotenv";
 import eventRoutes from "./routes/eventRoutes";
 import ticketTypeRoutes from "./routes/ticketTypeRoutes";
+import authRoutes from "./routes/authRoutes";
 
 dotenv.config();
 
@@ -40,8 +41,10 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Routes
-app.use("/api/events", eventRoutes);
-app.use("/api/events/:eventId/ticket-types", ticketTypeRoutes);
+// TODO: remove legacy routes
+// app.use("/api/events", eventRoutes);
+// app.use("/api/events/:eventId/ticket-types", ticketTypeRoutes);
+app.use("/api/v1/auth", authRoutes);
 
 // Initialize database connection
 AppDataSource.initialize()

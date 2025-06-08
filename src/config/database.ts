@@ -3,6 +3,7 @@ import { Event } from "../entities/Event";
 import { TicketType } from "../entities/TicketType";
 import { FAQ } from "../entities/FAQ";
 import { Order } from "../entities/Order";
+import { User } from "../entities/User";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -16,7 +17,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || "event_ticketing",
   synchronize: process.env.NODE_ENV === "development",
   logging: process.env.NODE_ENV === "development",
-  entities: [Event, TicketType, FAQ, Order],
+  entities: [Event, TicketType, FAQ, Order, User],
   migrations: ["src/migrations/*.ts"],
   subscribers: ["src/subscribers/*.ts"],
 });
