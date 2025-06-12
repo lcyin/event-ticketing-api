@@ -17,17 +17,17 @@ export class User {
   email: string;
 
   @Column()
-  password_hash: string;
+  passwordHash: string;
 
-  @Column({ nullable: true, default: null })
-  first_name: string | null;
+  @Column({ type: "varchar", nullable: true, default: null })
+  firstName: string | null;
 
-  @Column({ nullable: true, default: null })
-  last_name: string | null;
+  @Column({ type: "varchar", nullable: true, default: null })
+  lastName: string | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updatedAt: Date;
 }

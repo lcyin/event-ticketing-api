@@ -7,23 +7,23 @@ export class CreateOrdersTable1709123456792 implements MigrationInterface {
     await queryRunner.query(`
             CREATE TABLE "order" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-                "user_id" uuid NOT NULL,
-                "total_amount" decimal(10,2) NOT NULL,
+                "userId" uuid NOT NULL,
+                "totalAmount" decimal(10,2) NOT NULL,
                 "status" character varying NOT NULL,
-                "customer_name" character varying NOT NULL,
-                "customer_email" character varying NOT NULL,
-                "billing_address_line1" character varying,
-                "billing_address_line2" character varying,
-                "billing_city" character varying,
-                "billing_state" character varying,
-                "billing_zip" character varying,
-                "payment_method" character varying NOT NULL,
-                "payment_status" character varying NOT NULL,
-                "transaction_id" character varying,
-                "created_at" TIMESTAMP NOT NULL DEFAULT now(),
-                "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+                "customerName" character varying NOT NULL,
+                "customerEmail" character varying NOT NULL,
+                "billingAddressLine1" character varying,
+                "billingAddressLine2" character varying,
+                "billingCity" character varying,
+                "billingState" character varying,
+                "billingZip" character varying,
+                "paymentMethod" character varying NOT NULL,
+                "paymentStatus" character varying NOT NULL,
+                "transactionId" character varying,
+                "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+                "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
                 CONSTRAINT "PK_order" PRIMARY KEY ("id"),
-                CONSTRAINT "FK_order_user" FOREIGN KEY ("user_id")
+                CONSTRAINT "FK_order_user" FOREIGN KEY ("userId")
                     REFERENCES "user"("id") ON DELETE RESTRICT
             )
         `);

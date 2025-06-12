@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { AppDataSource } from "../config/database";
+import { getDataSource } from "../config/getDataSource";
 import { User } from "../entities/User";
 import bcrypt from "bcryptjs";
 
 export const register = async (req: Request, res: Response) => {
-  const { email, password, first_name, last_name } = req.body;
+  const { email, password, firstName, lastName } = req.body;
 
   // Basic validation
   if (
@@ -18,14 +18,14 @@ export const register = async (req: Request, res: Response) => {
     return res.status(400).json({ message: "Password too short" });
   }
 
-  const userRepo = AppDataSource.getRepository(User);
+  const userRepo = getDataSource().getRepository(User);
   const existing = await userRepo.findOne({ where: { email } });
   if (existing) {
     return res.status(409).json({ message: "Email already registered" });
   }
 
-  const password_hash = await bcrypt.hash(password, 10);
-  const user = userRepo.create({ email, password_hash, first_name, last_name });
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = userRepo.create({ email, passwordHash, firstName, lastName });
   await userRepo.save(user);
 
   return res.status(201).json({
