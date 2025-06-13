@@ -1,6 +1,6 @@
 import request from "supertest";
 import express, { Express } from "express";
-import { register } from "../../controllers/authController";
+import { register, login } from "../../controllers/authController";
 import { TestDataSource } from "../../config/test-database";
 import { User } from "../../entities/User";
 import bcrypt from "bcryptjs";
@@ -8,10 +8,9 @@ import bcrypt from "bcryptjs";
 const app: Express = express();
 app.use(express.json());
 
-// Mount the auth controller route.
-// Assumes authRoutes.ts defines POST /register for the register controller
-// and index.ts mounts authRoutes under /api/v1/auth.
+// Mount the auth routes
 app.post("/api/v1/auth/register", register);
+app.post("/api/v1/auth/login", login);
 
 describe("Auth Controller - /api/v1/auth", () => {
   //   beforeAll(async () => {
@@ -28,9 +27,9 @@ describe("Auth Controller - /api/v1/auth", () => {
 
   const userRepository = TestDataSource.getRepository(User);
 
-  beforeEach(async () => {
-    // await userRepository.clear();
-  });
+  // beforeEach(async () => {
+  //   await userRepository.clear();
+  // });
 
   describe("POST /register", () => {
     const getMockUserPayload = () => ({
@@ -118,6 +117,94 @@ describe("Auth Controller - /api/v1/auth", () => {
         .send(payloadWithoutPassword);
       expect(response.status).toBe(400);
       expect(response.body.message).toBe("Password too short");
+    });
+  });
+
+  describe("POST /login", () => {
+    const getMockUserPayload = () => ({
+      email: "test@example.com" + new Date().getTime(),
+      password: "password123",
+      firstName: "Test",
+      lastName: "User",
+    });
+
+    it("should login successfully with valid credentials", async () => {
+      // First register a user
+      const mockUserPayload = getMockUserPayload();
+      const hashedPassword = await bcrypt.hash(mockUserPayload.password, 10);
+      const user = await userRepository.save(
+        userRepository.create({
+          ...mockUserPayload,
+          passwordHash: hashedPassword,
+        })
+      );
+
+      // Try to login
+      const response = await request(app).post("/api/v1/auth/login").send({
+        email: mockUserPayload.email,
+        password: mockUserPayload.password,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty("access_token");
+      expect(response.body.token_type).toBe("Bearer");
+      expect(response.body.expires_in).toBe(3600);
+      expect(response.body.user).toEqual({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: "user",
+      });
+    });
+
+    it("should return 401 with invalid password", async () => {
+      // First register a user
+      const mockUserPayload = getMockUserPayload();
+      const hashedPassword = await bcrypt.hash(mockUserPayload.password, 10);
+      await userRepository.save(
+        userRepository.create({
+          ...mockUserPayload,
+          passwordHash: hashedPassword,
+        })
+      );
+
+      // Try to login with wrong password
+      const response = await request(app).post("/api/v1/auth/login").send({
+        email: mockUserPayload.email,
+        password: "wrongpassword",
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid credentials");
+    });
+
+    it("should return 401 with non-existent email", async () => {
+      const response = await request(app).post("/api/v1/auth/login").send({
+        email: "nonexistent@example.com",
+        password: "password123",
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid credentials");
+    });
+
+    it("should return 400 if email is missing", async () => {
+      const response = await request(app).post("/api/v1/auth/login").send({
+        password: "password123",
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe("Email and password are required");
+    });
+
+    it("should return 400 if password is missing", async () => {
+      const response = await request(app).post("/api/v1/auth/login").send({
+        email: "test@example.com",
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe("Email and password are required");
     });
   });
 });
