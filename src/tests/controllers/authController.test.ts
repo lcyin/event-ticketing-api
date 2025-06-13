@@ -5,11 +5,13 @@ import {
   login,
   logout,
   forgotPassword,
+  resetPassword,
 } from "../../controllers/authController";
 import { TestDataSource } from "../../config/test-database";
 import { User } from "../../entities/User";
 import bcrypt from "bcryptjs";
 import { authenticateToken } from "../../middleware/auth";
+import { generateToken } from "../../utils/jwt";
 
 const app: Express = express();
 app.use(express.json());
@@ -19,6 +21,7 @@ app.post("/api/v1/auth/register", register);
 app.post("/api/v1/auth/login", login);
 app.post("/api/v1/auth/logout", authenticateToken, logout);
 app.post("/api/v1/auth/forgot-password", forgotPassword);
+app.post("/api/v1/auth/reset-password", resetPassword);
 
 describe("Auth Controller - /api/v1/auth", () => {
   //   beforeAll(async () => {
@@ -300,6 +303,130 @@ describe("Auth Controller - /api/v1/auth", () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("message", "Invalid email format");
+    });
+  });
+
+  describe("POST /api/v1/auth/reset-password", () => {
+    it("should reset password successfully with valid token", async () => {
+      // First create a user
+      const mockUserPayload = getMockUserPayload();
+      const hashedPassword = await bcrypt.hash(mockUserPayload.password, 10);
+      const user = await userRepository.save(
+        userRepository.create({
+          ...mockUserPayload,
+          passwordHash: hashedPassword,
+        })
+      );
+
+      // Generate a reset token
+      const resetToken = generateToken(
+        { id: user.id, email: user.email },
+        { expiresIn: "1h" }
+      );
+
+      const response = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({
+          token: resetToken,
+          new_password: "newpassword123",
+          confirm_new_password: "newpassword123",
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe("Password reset successfully.");
+
+      // Verify the password was actually changed
+      const updatedUser = await userRepository.findOneBy({ id: user.id });
+      const isNewPasswordValid = await bcrypt.compare(
+        "newpassword123",
+        updatedUser!.passwordHash
+      );
+      expect(isNewPasswordValid).toBe(true);
+    });
+
+    it("should return 401 with invalid token", async () => {
+      const response = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({
+          token: "invalid-token",
+          new_password: "newpassword123",
+          confirm_new_password: "newpassword123",
+        });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid or expired reset token");
+    });
+
+    it("should return 400 when passwords do not match", async () => {
+      // First create a user
+      const mockUserPayload = getMockUserPayload();
+      const hashedPassword = await bcrypt.hash(mockUserPayload.password, 10);
+      const user = await userRepository.save(
+        userRepository.create({
+          ...mockUserPayload,
+          passwordHash: hashedPassword,
+        })
+      );
+
+      // Generate a reset token
+      const resetToken = generateToken(
+        { id: user.id, email: user.email },
+        { expiresIn: "1h" }
+      );
+
+      const response = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({
+          token: resetToken,
+          new_password: "newpassword123",
+          confirm_new_password: "differentpassword",
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe("Passwords do not match");
+    });
+
+    it("should return 400 when new password is too short", async () => {
+      // First create a user
+      const mockUserPayload = getMockUserPayload();
+      const hashedPassword = await bcrypt.hash(mockUserPayload.password, 10);
+      const user = await userRepository.save(
+        userRepository.create({
+          ...mockUserPayload,
+          passwordHash: hashedPassword,
+        })
+      );
+
+      // Generate a reset token
+      const resetToken = generateToken(
+        { id: user.id, email: user.email },
+        { expiresIn: "1h" }
+      );
+
+      const response = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({
+          token: resetToken,
+          new_password: "123",
+          confirm_new_password: "123",
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe(
+        "Password must be at least 6 characters long"
+      );
+    });
+
+    it("should return 400 when required fields are missing", async () => {
+      const response = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({
+          token: "some-token",
+          // missing new_password and confirm_new_password
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe("All fields are required");
     });
   });
 });
