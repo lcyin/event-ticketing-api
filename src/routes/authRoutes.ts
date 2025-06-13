@@ -4,6 +4,7 @@ import {
   login,
   logout,
   forgotPassword,
+  resetPassword,
 } from "../controllers/authController";
 
 const router = Router();
@@ -110,5 +111,41 @@ router.post("/logout", logout);
  *         description: Invalid email format
  */
 router.post("/forgot-password", forgotPassword);
+
+/**
+ * @swagger
+ * /api/v1/auth/reset-password:
+ *   post:
+ *     summary: Reset password with token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - new_password
+ *               - confirm_new_password
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: The reset token received via email
+ *               new_password:
+ *                 type: string
+ *                 minLength: 6
+ *               confirm_new_password:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Validation error (e.g., passwords don't match)
+ *       401:
+ *         description: Invalid or expired token
+ */
+router.post("/reset-password", resetPassword);
 
 export default router;

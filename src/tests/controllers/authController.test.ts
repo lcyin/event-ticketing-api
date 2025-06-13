@@ -1,6 +1,11 @@
 import request from "supertest";
 import express, { Express } from "express";
-import { register, login, logout } from "../../controllers/authController";
+import {
+  register,
+  login,
+  logout,
+  forgotPassword,
+} from "../../controllers/authController";
 import { TestDataSource } from "../../config/test-database";
 import { User } from "../../entities/User";
 import bcrypt from "bcryptjs";
@@ -13,6 +18,7 @@ app.use(express.json());
 app.post("/api/v1/auth/register", register);
 app.post("/api/v1/auth/login", login);
 app.post("/api/v1/auth/logout", authenticateToken, logout);
+app.post("/api/v1/auth/forgot-password", forgotPassword);
 
 describe("Auth Controller - /api/v1/auth", () => {
   //   beforeAll(async () => {
@@ -245,6 +251,55 @@ describe("Auth Controller - /api/v1/auth", () => {
 
       expect(response.status).toBe(401);
       expect(response.body.message).toBe("Invalid token");
+    });
+  });
+  describe("POST /api/v1/auth/forgot-password", () => {
+    it("should return 200 with success message for valid email", async () => {
+      const response = await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({
+          email: "test@example.com",
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty(
+        "message",
+        "If an account with that email exists, a password reset link has been sent."
+      );
+    });
+
+    it("should return 200 with same message for non-existent email", async () => {
+      const response = await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({
+          email: "nonexistent@example.com",
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty(
+        "message",
+        "If an account with that email exists, a password reset link has been sent."
+      );
+    });
+
+    it("should return 400 for invalid email format", async () => {
+      const response = await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({
+          email: "invalid-email",
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty("message", "Invalid email format");
+    });
+
+    it("should return 400 for missing email", async () => {
+      const response = await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty("message", "Invalid email format");
     });
   });
 });
