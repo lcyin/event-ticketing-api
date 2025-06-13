@@ -1,9 +1,10 @@
 import request from "supertest";
 import express, { Express } from "express";
-import { register, login } from "../../controllers/authController";
+import { register, login, logout } from "../../controllers/authController";
 import { TestDataSource } from "../../config/test-database";
 import { User } from "../../entities/User";
 import bcrypt from "bcryptjs";
+import { authenticateToken } from "../../middleware/auth";
 
 const app: Express = express();
 app.use(express.json());
@@ -11,6 +12,7 @@ app.use(express.json());
 // Mount the auth routes
 app.post("/api/v1/auth/register", register);
 app.post("/api/v1/auth/login", login);
+app.post("/api/v1/auth/logout", authenticateToken, logout);
 
 describe("Auth Controller - /api/v1/auth", () => {
   //   beforeAll(async () => {
@@ -31,14 +33,14 @@ describe("Auth Controller - /api/v1/auth", () => {
   //   await userRepository.clear();
   // });
 
-  describe("POST /register", () => {
-    const getMockUserPayload = () => ({
-      email: "test@example.com" + new Date().getTime(), // Ensure unique email for each test
-      password: "password123",
-      firstName: "Test",
-      lastName: "User",
-    });
+  const getMockUserPayload = () => ({
+    email: "test@example.com" + new Date().getTime(),
+    password: "password123",
+    firstName: "Test",
+    lastName: "User",
+  });
 
+  describe("POST /register", () => {
     it("should register a new user successfully", async () => {
       const mockUserPayload = getMockUserPayload();
       const response = await request(app)
@@ -121,13 +123,6 @@ describe("Auth Controller - /api/v1/auth", () => {
   });
 
   describe("POST /login", () => {
-    const getMockUserPayload = () => ({
-      email: "test@example.com" + new Date().getTime(),
-      password: "password123",
-      firstName: "Test",
-      lastName: "User",
-    });
-
     it("should login successfully with valid credentials", async () => {
       // First register a user
       const mockUserPayload = getMockUserPayload();
@@ -146,9 +141,9 @@ describe("Auth Controller - /api/v1/auth", () => {
       });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("access_token");
-      expect(response.body.token_type).toBe("Bearer");
-      expect(response.body.expires_in).toBe(3600);
+      expect(response.body).toHaveProperty("accessToken");
+      expect(response.body.tokenType).toBe("Bearer");
+      expect(response.body.expiresIn).toBe(3600);
       expect(response.body.user).toEqual({
         id: user.id,
         email: user.email,
@@ -205,6 +200,51 @@ describe("Auth Controller - /api/v1/auth", () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toBe("Email and password are required");
+    });
+  });
+
+  describe("POST /logout", () => {
+    it("should return 200 with success message when valid token is provided", async () => {
+      // First register and login to get a valid token
+      const mockUserPayload = getMockUserPayload();
+      const hashedPassword = await bcrypt.hash(mockUserPayload.password, 10);
+      const user = await userRepository.save(
+        userRepository.create({
+          ...mockUserPayload,
+          passwordHash: hashedPassword,
+        })
+      );
+
+      const loginResponse = await request(app).post("/api/v1/auth/login").send({
+        email: mockUserPayload.email,
+        password: mockUserPayload.password,
+      });
+
+      const token = loginResponse.body.accessToken;
+
+      // Now test logout with the valid token
+      const response = await request(app)
+        .post("/api/v1/auth/logout")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe("Logged out successfully.");
+    });
+
+    it("should return 401 when no token is provided", async () => {
+      const response = await request(app).post("/api/v1/auth/logout");
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("No token provided");
+    });
+
+    it("should return 401 when invalid token is provided", async () => {
+      const response = await request(app)
+        .post("/api/v1/auth/logout")
+        .set("Authorization", "Bearer invalid-token");
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token");
     });
   });
 });

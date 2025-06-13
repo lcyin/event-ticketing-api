@@ -63,9 +63,9 @@ export const login = async (req: Request, res: Response) => {
   });
 
   return res.status(200).json({
-    access_token: token,
-    token_type: "Bearer",
-    expires_in: 3600, // 1 hour in seconds
+    accessToken: token,
+    tokenType: "Bearer",
+    expiresIn: 3600, // 1 hour in seconds
     user: {
       id: user.id,
       email: user.email,
@@ -74,4 +74,11 @@ export const login = async (req: Request, res: Response) => {
       role: "user",
     },
   });
+};
+
+export const logout = async (req: Request, res: Response) => {
+  // Since we're using JWTs, we don't need to do anything on the server side
+  // The client should remove the token from their storage
+  // In a more complex system, you might want to implement token blacklisting
+  return res.status(200).json({ message: "Logged out successfully." });
 };
