@@ -7,7 +7,7 @@ import { Event } from "../../entities/Event";
 import { generateToken } from "../../utils/jwt";
 import { authenticateToken } from "../../middleware/auth";
 import { authorizeAdmin } from "../../middleware/adminAuth";
-import { createEvent } from "../../controllers/adminController";
+import { createEvent, getAllEvents } from "../../controllers/adminController";
 
 const app: Express = express();
 app.use(express.json());
@@ -18,6 +18,12 @@ app.post(
   authenticateToken,
   authorizeAdmin,
   createEvent
+);
+app.get(
+  "/api/v1/admin/events",
+  authenticateToken,
+  authorizeAdmin,
+  getAllEvents
 );
 
 describe("Admin Controller - POST /api/v1/admin/events", () => {
@@ -43,6 +49,7 @@ describe("Admin Controller - POST /api/v1/admin/events", () => {
     image_url: "https://example.com/images/tech-conf.jpg",
     price_range: "$100 - $500",
     categories: ["Technology", "Conference", "Networking"],
+    status: "draft",
     ...overrides,
   });
 
@@ -113,6 +120,7 @@ describe("Admin Controller - POST /api/v1/admin/events", () => {
     expect(response.body.image_url).toBe(payload.image_url);
     expect(response.body.price_range).toBe(payload.price_range);
     expect(response.body.categories).toEqual(payload.categories);
+    expect(response.body.status).toBe(payload.status);
     expect(response.body).toHaveProperty("created_at");
     expect(response.body).toHaveProperty("updated_at");
 
@@ -293,5 +301,246 @@ describe("Admin Controller - POST /api/v1/admin/events", () => {
         expect(response.body.message).toBe(message);
       });
     });
+  });
+});
+
+describe("Admin Controller - GET /api/v1/admin/events", () => {
+  const userRepository = getDataSource().getRepository(User);
+  const eventRepository = getDataSource().getRepository(Event);
+
+  let adminUser: User;
+  let regularUser: User;
+  let adminToken: string;
+  let userToken: string;
+
+  const createTestEvent = async (props: Partial<Event> = {}) => {
+    const defaultEvent = {
+      title: "Test Event " + Date.now(),
+      date: "2025-01-01",
+      venue: "Test Venue",
+      location: "Test Location",
+      imageUrl: "http://example.com/image.jpg",
+      priceRange: "Free",
+      categories: ["Test"],
+      status: "draft",
+      description: "Test desc",
+      ...props,
+    };
+    return eventRepository.save(eventRepository.create(defaultEvent));
+  };
+
+  beforeAll(async () => {
+    const adminPasswordHash = await bcrypt.hash("adminPass123", 10);
+    adminUser = userRepository.create({
+      email: "admin_get@example.com" + Date.now(),
+      passwordHash: adminPasswordHash,
+      firstName: "Admin",
+      lastName: "User",
+      role: "admin",
+    });
+    await userRepository.save(adminUser);
+    adminToken = generateToken({
+      id: adminUser.id,
+      email: adminUser.email,
+      role: adminUser.role,
+    });
+
+    const userPasswordHash = await bcrypt.hash("userPass123", 10);
+    regularUser = userRepository.create({
+      email: "user_get@example.com" + Date.now(),
+      passwordHash: userPasswordHash,
+      firstName: "Regular",
+      lastName: "User",
+      role: "user",
+    });
+    await userRepository.save(regularUser);
+    userToken = generateToken({
+      id: regularUser.id,
+      email: regularUser.email,
+      role: regularUser.role,
+    });
+
+    // Create some initial events for testing pagination, filtering, sorting
+    await createTestEvent({
+      title: "Alpha Event",
+      status: "published",
+      date: "2025-01-01",
+      createdAt: new Date("2024-01-01T10:00:00Z"),
+    });
+    await createTestEvent({
+      title: "Beta Event",
+      status: "draft",
+      date: "2025-02-01",
+      createdAt: new Date("2024-01-02T10:00:00Z"),
+    });
+    await createTestEvent({
+      title: "Gamma Event",
+      status: "published",
+      date: "2025-03-01",
+      createdAt: new Date("2024-01-03T10:00:00Z"),
+    });
+    await createTestEvent({
+      title: "Delta Event",
+      status: "archived",
+      date: "2024-12-01",
+      createdAt: new Date("2024-01-04T10:00:00Z"),
+    });
+  });
+
+  //   afterAll(async () => {
+  //     await eventRepository.clear(); // Use clear() to remove all records from the table
+  //     await userRepository.delete({ id: adminUser.id });
+  //     await userRepository.delete({ id: regularUser.id });
+  //   });
+
+  it("should return a paginated list of events for an admin", async () => {
+    const response = await request(app)
+      .get("/api/v1/admin/events?page=1&limit=2")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("total_events");
+    expect(response.body.total_events).toBeGreaterThanOrEqual(4);
+    expect(response.body.page).toBe(1);
+    expect(response.body.limit).toBe(2);
+    expect(response.body.events).toBeInstanceOf(Array);
+    expect(response.body.events.length).toBe(2);
+    response.body.events.forEach((event: any) => {
+      expect(event).toHaveProperty("id");
+      expect(event).toHaveProperty("title");
+      expect(event).toHaveProperty("status");
+    });
+  });
+
+  it("should filter events by status", async () => {
+    const response = await request(app)
+      .get("/api/v1/admin/events?status=published")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.events.length).toBeGreaterThanOrEqual(2);
+    response.body.events.forEach((event: any) => {
+      expect(event.status).toBe("published");
+    });
+  });
+
+  it("should sort events by title in ascending order", async () => {
+    const response = await request(app)
+      .get("/api/v1/admin/events?sort_by=title&order=asc&limit=4")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(response.body).toEqual({
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          title: expect.any(String),
+          status: expect.any(String),
+          created_at: expect.any(String),
+          updated_at: expect.any(String),
+          date: expect.any(String),
+          description: expect.any(String),
+          id: expect.any(String),
+          location: expect.any(String),
+        }),
+      ]),
+      limit: expect.any(Number),
+      page: expect.any(Number),
+      total_events: expect.any(Number),
+    });
+    //     expect(response.body).toMatchInlineSnapshot(`
+    // {
+    //   "events": [
+    //     {
+    //       "created_at": "2024-01-01T10:00:00.000Z",
+    //       "date": "2025-01-01",
+    //       "description": "Test desc",
+    //       "id": "5ac8685f-eded-46e1-8a8f-aea343d97caa",
+    //       "location": "Test Location",
+    //       "status": "published",
+    //       "title": "Alpha Event",
+    //       "updated_at": "2025-06-14T12:05:32.871Z",
+    //     },
+    //     {
+    //       "created_at": "2024-01-01T10:00:00.000Z",
+    //       "date": "2025-01-01",
+    //       "description": "Test desc",
+    //       "id": "dcd95f18-9fbd-47e0-9844-86485650beea",
+    //       "location": "Test Location",
+    //       "status": "published",
+    //       "title": "Alpha Event",
+    //       "updated_at": "2025-06-14T12:04:41.768Z",
+    //     },
+    //     {
+    //       "created_at": "2024-01-01T10:00:00.000Z",
+    //       "date": "2025-01-01",
+    //       "description": "Test desc",
+    //       "id": "3d2bfd62-a102-4890-891c-affe80ba4c75",
+    //       "location": "Test Location",
+    //       "status": "published",
+    //       "title": "Alpha Event",
+    //       "updated_at": "2025-06-14T12:03:52.216Z",
+    //     },
+    //     {
+    //       "created_at": "2024-01-01T10:00:00.000Z",
+    //       "date": "2025-01-01",
+    //       "description": "Test desc",
+    //       "id": "e8668572-41a8-47db-9d6d-d3206b4b3f02",
+    //       "location": "Test Location",
+    //       "status": "published",
+    //       "title": "Alpha Event",
+    //       "updated_at": "2025-06-14T12:05:55.738Z",
+    //     },
+    //   ],
+    //   "limit": 4,
+    //   "page": 1,
+    //   "total_events": 66,
+    // }
+    // `);
+  });
+
+  it("should sort events by date in descending order", async () => {
+    const response = await request(app)
+      .get("/api/v1/admin/events?sort_by=date&order=desc&limit=4")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.events.length).toBe(4);
+    expect(
+      new Date(response.body.events[0].date).getTime()
+    ).toBeGreaterThanOrEqual(new Date(response.body.events[1].date).getTime());
+  });
+
+  it("should return 403 Forbidden if a non-admin user tries to get events", async () => {
+    const response = await request(app)
+      .get("/api/v1/admin/events")
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe(
+      "Forbidden: Administrator access required."
+    );
+  });
+
+  it("should return 401 Unauthorized if no token is provided", async () => {
+    const response = await request(app).get("/api/v1/admin/events");
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("No token provided");
+  });
+
+  it("should default to page 1, limit 10, sort by createdAt desc if no params provided", async () => {
+    const response = await request(app)
+      .get("/api/v1/admin/events")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.page).toBe(1);
+    expect(response.body.limit).toBe(10);
+    // Check if sorted by createdAt desc (latest first)
+    if (response.body.events.length > 1) {
+      expect(
+        new Date(response.body.events[0].created_at).getTime()
+      ).toBeGreaterThanOrEqual(
+        new Date(response.body.events[1].created_at).getTime()
+      );
+    }
   });
 });

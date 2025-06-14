@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { getDataSource } from "../config/getDataSource";
 import { Event } from "../entities/Event";
-import { validate as isValidUUID } from "uuid";
 
 export const createEvent = async (req: Request, res: Response) => {
   const {
@@ -18,6 +17,7 @@ export const createEvent = async (req: Request, res: Response) => {
     image_url,
     price_range,
     categories,
+    status, // Added status field
   } = req.body;
 
   // --- Basic Validation ---
@@ -68,11 +68,9 @@ export const createEvent = async (req: Request, res: Response) => {
     categories.length === 0 ||
     !categories.every((cat) => typeof cat === "string")
   ) {
-    return res
-      .status(400)
-      .json({
-        message: "Categories are required as a non-empty array of strings.",
-      });
+    return res.status(400).json({
+      message: "Categories are required as a non-empty array of strings.",
+    });
   }
   // Optional fields type checks
   if (description && typeof description !== "string") {
@@ -108,6 +106,7 @@ export const createEvent = async (req: Request, res: Response) => {
       imageUrl: image_url,
       priceRange: price_range,
       categories,
+      status: status || "draft", // Default to 'draft' if not provided
     });
 
     const savedEvent = await eventRepository.save(newEvent);
@@ -127,6 +126,7 @@ export const createEvent = async (req: Request, res: Response) => {
       image_url: savedEvent.imageUrl,
       price_range: savedEvent.priceRange,
       categories: savedEvent.categories,
+      status: savedEvent.status,
       created_at: savedEvent.createdAt.toISOString(),
       updated_at: savedEvent.updatedAt.toISOString(),
     });
@@ -136,6 +136,70 @@ export const createEvent = async (req: Request, res: Response) => {
     // if (error.code === '23505') { // Example for PostgreSQL unique violation
     //   return res.status(409).json({ message: "Event with this title/date already exists." });
     // }
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getAllEvents = async (req: Request, res: Response) => {
+  try {
+    const eventRepository = getDataSource().getRepository(Event);
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const statusFilter = req.query.status as string;
+    const sortBy = (req.query.sort_by as string) || "createdAt"; // Default sort
+    const order =
+      (req.query.order as string)?.toUpperCase() === "ASC" ? "ASC" : "DESC"; // Default DESC
+
+    const offset = (page - 1) * limit;
+
+    const queryBuilder = eventRepository.createQueryBuilder("event");
+
+    if (statusFilter) {
+      queryBuilder.where("event.status = :status", { status: statusFilter });
+    }
+
+    // Validate sortBy to prevent SQL injection if directly using user input
+    // For simple cases, a whitelist is good. For complex, consider mapping.
+    const allowedSortFields = [
+      "id",
+      "title",
+      "date",
+      "location",
+      "status",
+      "createdAt",
+      "updatedAt",
+    ];
+    if (allowedSortFields.includes(sortBy)) {
+      queryBuilder.orderBy(`event.${sortBy}`, order);
+    } else {
+      queryBuilder.orderBy(`event.createdAt`, "DESC"); // Default sort if invalid field
+    }
+
+    const [events, totalEvents] = await queryBuilder
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
+
+    const formattedEvents = events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description, // Keep it brief for list view
+      date: event.date,
+      location: event.location,
+      status: event.status,
+      created_at: event.createdAt.toISOString(),
+      updated_at: event.updatedAt.toISOString(),
+    }));
+
+    return res.status(200).json({
+      total_events: totalEvents,
+      page,
+      limit,
+      events: formattedEvents,
+    });
+  } catch (error) {
+    console.error("Error fetching events for admin:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

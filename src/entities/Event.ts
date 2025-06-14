@@ -53,6 +53,9 @@ export class Event {
   @Column("simple-array")
   categories: string[];
 
+  @Column({ type: "varchar", length: 50, default: "draft" }) // e.g., draft, published, archived
+  status: string;
+
   @OneToMany(() => TicketType, (ticketType) => ticketType.event)
   ticketTypes: TicketType[];
 
