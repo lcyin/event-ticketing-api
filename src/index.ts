@@ -5,8 +5,6 @@ import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 import { AppDataSource } from "./config/database";
 import dotenv from "dotenv";
-import eventRoutes from "./routes/eventRoutes";
-import ticketTypeRoutes from "./routes/ticketTypeRoutes";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 
@@ -42,8 +40,6 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Routes
-app.use("/api/v1/events", eventRoutes);
-app.use("/api/v1/ticket-types", ticketTypeRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 
