@@ -7,6 +7,7 @@ import { AppDataSource } from "./config/database";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
+import adminRoutes from "./routes/adminRoutes"; // Import admin routes
 
 dotenv.config();
 
@@ -33,15 +34,76 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ["./src/routes/*.ts"], // Path to the API routes
+  apis: ["./src/routes/*.ts", "./src/routes/adminRoutes.ts"], // Include admin routes
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
+// Define Event schema for Swagger (can be in a separate file or here)
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Event:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *           nullable: true
+ *         long_description:
+ *           type: string
+ *           nullable: true
+ *         date:
+ *           type: string
+ *           format: date
+ *         start_time:
+ *           type: string
+ *           nullable: true
+ *         end_time:
+ *           type: string
+ *           nullable: true
+ *         venue:
+ *           type: string
+ *         location:
+ *           type: string
+ *         address:
+ *           type: string
+ *           nullable: true
+ *         organizer:
+ *           type: string
+ *           nullable: true
+ *         image_url:
+ *           type: string
+ *           format: url
+ *         price_range:
+ *           type: string
+ *         categories:
+ *           type: array
+ *           items:
+ *             type: string
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ */
+
 // Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/admin", adminRoutes); // Mount admin routes
 
 // Initialize database connection
 AppDataSource.initialize()

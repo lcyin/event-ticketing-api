@@ -22,7 +22,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       lastName: user.lastName,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      role: "user", // You can add role-based logic later
+      role: user.role,
     });
   } catch (error) {
     console.error("Error in getCurrentUser:", error);
@@ -57,7 +57,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       lastName: user.lastName,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      role: "user",
+      role: user.role,
     });
   } catch (error) {
     console.error("Error in updateProfile:", error);

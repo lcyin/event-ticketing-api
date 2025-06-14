@@ -44,19 +44,13 @@ export class Event {
   @Column({ nullable: true })
   organizer: string;
 
-  @Column()
-  image: string;
-
-  @Column({ nullable: true, name: "image_url" })
+  @Column({ name: "image_url" })
   imageUrl: string;
 
   @Column({ name: "price_range" })
   priceRange: string;
 
-  @Column()
-  category: string;
-
-  @Column("simple-array", { nullable: true })
+  @Column("simple-array")
   categories: string[];
 
   @OneToMany(() => TicketType, (ticketType) => ticketType.event)

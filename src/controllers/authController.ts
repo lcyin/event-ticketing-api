@@ -26,7 +26,13 @@ export const register = async (req: Request, res: Response) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = userRepo.create({ email, passwordHash, firstName, lastName });
+  const user = userRepo.create({
+    email,
+    passwordHash,
+    firstName,
+    lastName,
+    role: "user", // Default role
+  });
   await userRepo.save(user);
 
   return res.status(201).json({
@@ -59,7 +65,7 @@ export const login = async (req: Request, res: Response) => {
   const token = generateToken({
     id: user.id,
     email: user.email,
-    role: "user", // You can add role-based authentication later
+    role: user.role,
   });
 
   return res.status(200).json({
@@ -71,7 +77,7 @@ export const login = async (req: Request, res: Response) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: "user",
+      role: user.role,
     },
   });
 };
