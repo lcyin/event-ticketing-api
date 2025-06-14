@@ -5,6 +5,7 @@ import {
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  JoinColumn,
 } from "typeorm";
 import { Event } from "./Event";
 
@@ -13,22 +14,23 @@ export class TicketType {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
+  @Column({ name: "event_id" })
+  eventId: string;
+
   @Column()
   name: string;
 
-  @Column("decimal", { precision: 10, scale: 2 })
+  @Column("integer")
   price: number;
 
   @Column({ nullable: true })
   description: string;
 
-  @Column()
-  available: number;
-
-  @Column({ nullable: true, name: "max_per_order" })
-  maxPerOrder: number;
+  @Column("integer")
+  quantity: number;
 
   @ManyToOne(() => Event, (event) => event.ticketTypes)
+  @JoinColumn({ name: "event_id" })
   event: Event;
 
   @CreateDateColumn({ name: "created_at" })
