@@ -245,6 +245,37 @@ export const getAllEvents = async (req: Request, res: Response) => {
   }
 };
 
+export const deleteEvent = async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+
+    if (!isValidUUID(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID format." });
+    }
+
+    const eventRepository = getDataSource().getRepository(Event);
+    const event = await eventRepository.findOneBy({ id: eventId });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    // Note: For HTTP 409 Conflict, you would add checks here.
+    // For example, check if there are active orders or non-cascade-deleted tickets.
+    // const orderRepository = getDataSource().getRepository(Order);
+    // const activeOrders = await orderRepository.count({ where: { eventId: eventId, status: 'active' } }); // Fictional field eventId on Order
+    // if (activeOrders > 0) {
+    //   return res.status(409).json({ message: "Cannot delete event with active orders." });
+    // }
+
+    await eventRepository.remove(event);
+    return res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting event for admin:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const updateEventDetails = async (req: Request, res: Response) => {
   try {
     const eventId = req.params.id;

@@ -4,6 +4,7 @@ import {
   getAllEvents,
   getEventById,
   updateEventDetails,
+  deleteEvent,
 } from "../controllers/adminController";
 import { authenticateToken } from "../middleware/auth";
 import { authorizeAdmin } from "../middleware/adminAuth";

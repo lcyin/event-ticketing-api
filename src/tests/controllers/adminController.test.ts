@@ -12,6 +12,7 @@ import {
   getAllEvents,
   getEventById,
   updateEventDetails,
+  deleteEvent,
 } from "../../controllers/adminController";
 
 const app: Express = express();
@@ -41,6 +42,12 @@ app.patch(
   authenticateToken,
   authorizeAdmin,
   updateEventDetails
+);
+app.delete(
+  "/api/v1/admin/events/:id",
+  authenticateToken,
+  authorizeAdmin,
+  deleteEvent
 );
 
 describe("Admin Controller - POST /api/v1/admin/events", () => {
@@ -847,4 +854,126 @@ describe("Admin Controller - PATCH /api/v1/admin/events/:id", () => {
 
     expect(response.status).toBe(401);
   });
+});
+
+describe("Admin Controller - DELETE /api/v1/admin/events/:id", () => {
+  const userRepository = getDataSource().getRepository(User);
+  const eventRepository = getDataSource().getRepository(Event);
+
+  let adminUser: User;
+  let regularUser: User;
+  let adminToken: string;
+  let userToken: string;
+  let eventToDelete: Event;
+
+  const createEventForDeletion = async (props: Partial<Event> = {}) => {
+    const defaultEvent = {
+      title: "Event To Be Deleted " + Date.now(),
+      date: "2027-01-01",
+      venue: "Deletion Venue",
+      location: "Deletion Location, DL",
+      imageUrl: "http://example.com/delete_me.jpg",
+      priceRange: "$1",
+      categories: ["Temporary", "Deletion"],
+      status: "draft",
+      ...props,
+    };
+    return eventRepository.save(eventRepository.create(defaultEvent));
+  };
+
+  beforeAll(async () => {
+    const adminPasswordHash = await bcrypt.hash("adminDelete123", 10);
+    adminUser = userRepository.create({
+      email: "admin_delete@example.com" + Date.now(),
+      passwordHash: adminPasswordHash,
+      role: "admin",
+    });
+    await userRepository.save(adminUser);
+    adminToken = generateToken({
+      id: adminUser.id,
+      email: adminUser.email,
+      role: adminUser.role,
+    });
+
+    const userPasswordHash = await bcrypt.hash("userDelete123", 10);
+    regularUser = userRepository.create({
+      email: "user_delete@example.com" + Date.now(),
+      passwordHash: userPasswordHash,
+      role: "user",
+    });
+    await userRepository.save(regularUser);
+    userToken = generateToken({
+      id: regularUser.id,
+      email: regularUser.email,
+      role: regularUser.role,
+    });
+  });
+
+  beforeEach(async () => {
+    eventToDelete = await createEventForDeletion();
+  });
+
+  // afterEach(async () => {
+  //   // Attempt to clean up if event wasn't deleted by the test, or if test failed before deletion
+  //   if (eventToDelete && eventToDelete.id) {
+  //     const stillExists = await eventRepository.findOneBy({
+  //       id: eventToDelete.id,
+  //     });
+  //     if (stillExists) {
+  //       await eventRepository.delete({ id: eventToDelete.id });
+  //     }
+  //   }
+  // });
+
+  // afterAll(async () => {
+  //   await userRepository.delete({ id: adminUser.id });
+  //   await userRepository.delete({ id: regularUser.id });
+  // });
+
+  it("should delete an event successfully and return 204 No Content", async () => {
+    const response = await request(app)
+      .delete(`/api/v1/admin/events/${eventToDelete.id}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(204);
+    const dbEvent = await eventRepository.findOneBy({ id: eventToDelete.id });
+    expect(dbEvent).toBeNull();
+  });
+
+  it("should return 404 Not Found if event ID does not exist for deletion", async () => {
+    const nonExistentId = "00000000-0000-0000-0000-000000000000";
+    const response = await request(app)
+      .delete(`/api/v1/admin/events/${nonExistentId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(404);
+  });
+
+  it("should return 400 Bad Request for invalid event ID format during deletion", async () => {
+    const invalidId = "this-is-not-a-uuid";
+    const response = await request(app)
+      .delete(`/api/v1/admin/events/${invalidId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("should return 403 Forbidden if a non-admin user tries to delete an event", async () => {
+    const response = await request(app)
+      .delete(`/api/v1/admin/events/${eventToDelete.id}`)
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  it("should return 401 Unauthorized if no token is provided for deletion", async () => {
+    const response = await request(app).delete(
+      `/api/v1/admin/events/${eventToDelete.id}`
+    );
+
+    expect(response.status).toBe(401);
+  });
+
+  // Test for 409 Conflict would require setting up dependencies (e.g., orders)
+  // and ensuring the delete logic checks for them.
 });
