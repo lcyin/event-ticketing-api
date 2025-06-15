@@ -795,7 +795,7 @@ describe("Admin Controller - PATCH /api/v1/admin/events/:id", () => {
   });
 
   it("should return 404 Not Found if event ID does not exist for update", async () => {
-    const nonExistentId = "11111111-1111-1111-1111-111111111111";
+    const nonExistentId = "00000000-0000-0000-0000-000000000000";
     const updates = { title: "Attempt to update non-existent" };
     const response = await request(app)
       .patch(`/api/v1/admin/events/${nonExistentId}`)
