@@ -11,6 +11,7 @@ import {
   createEvent,
   getAllEvents,
   getEventById,
+  updateEventDetails,
 } from "../../controllers/adminController";
 
 const app: Express = express();
@@ -34,6 +35,12 @@ app.get(
   authenticateToken,
   authorizeAdmin,
   getEventById
+);
+app.patch(
+  "/api/v1/admin/events/:id",
+  authenticateToken,
+  authorizeAdmin,
+  updateEventDetails
 );
 
 describe("Admin Controller - POST /api/v1/admin/events", () => {
@@ -687,5 +694,157 @@ describe("Admin Controller - GET /api/v1/admin/events/:id", () => {
       .set("Authorization", "Bearer invalid-token-string");
     expect(response.status).toBe(401);
     expect(response.body.message).toBe("Invalid token");
+  });
+});
+
+describe("Admin Controller - PATCH /api/v1/admin/events/:id", () => {
+  const userRepository = getDataSource().getRepository(User);
+  const eventRepository = getDataSource().getRepository(Event);
+
+  let adminUser: User;
+  let regularUser: User;
+  let adminToken: string;
+  let userToken: string;
+  let eventToUpdate: Event;
+
+  const createInitialEvent = async (props: Partial<Event> = {}) => {
+    const defaultEvent = {
+      title: "Initial Event Title " + Date.now(),
+      description: "Initial description.",
+      longDescription: "Initial long description.",
+      date: "2026-01-01",
+      startTime: "12:00",
+      endTime: "20:00",
+      venue: "Initial Venue",
+      location: "Initial Location, IL",
+      address: "789 Initial Ave",
+      organizer: "Initial Org",
+      imageUrl: "http://example.com/initial.jpg",
+      priceRange: "$10 - $30",
+      categories: ["Initial", "Setup"],
+      status: "draft",
+      ...props,
+    };
+    return eventRepository.save(eventRepository.create(defaultEvent));
+  };
+
+  beforeAll(async () => {
+    // Create users
+    const adminPasswordHash = await bcrypt.hash("adminPatch123", 10);
+    adminUser = userRepository.create({
+      email: "admin_patch@example.com" + Date.now(),
+      passwordHash: adminPasswordHash,
+      role: "admin",
+    });
+    await userRepository.save(adminUser);
+    adminToken = generateToken({
+      id: adminUser.id,
+      email: adminUser.email,
+      role: adminUser.role,
+    });
+
+    const userPasswordHash = await bcrypt.hash("userPatch123", 10);
+    regularUser = userRepository.create({
+      email: "user_patch@example.com" + Date.now(),
+      passwordHash: userPasswordHash,
+      role: "user",
+    });
+    await userRepository.save(regularUser);
+    userToken = generateToken({
+      id: regularUser.id,
+      email: regularUser.email,
+      role: regularUser.role,
+    });
+  });
+
+  beforeEach(async () => {
+    // Create a fresh event before each test in this suite
+    eventToUpdate = await createInitialEvent();
+  });
+
+  // afterEach(async () => {
+  //   // Clean up the created event
+  //   if (eventToUpdate && eventToUpdate.id) {
+  //     await eventRepository.delete({ id: eventToUpdate.id });
+  //   }
+  // });
+
+  // afterAll(async () => {
+  //   await userRepository.delete({ id: adminUser.id });
+  //   await userRepository.delete({ id: regularUser.id });
+  // });
+
+  it("should update event details successfully with partial data", async () => {
+    const updates = {
+      description: "Updated event description.",
+      start_time: "15:00",
+      categories: ["Music", "Festival", "Family-Friendly"],
+    };
+
+    const response = await request(app)
+      .patch(`/api/v1/admin/events/${eventToUpdate.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send(updates);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(eventToUpdate.id);
+    expect(response.body.description).toBe(updates.description);
+    expect(response.body.start_time).toBe(updates.start_time);
+    expect(response.body.categories).toEqual(updates.categories);
+    expect(response.body.title).toBe(eventToUpdate.title); // Should remain unchanged
+  });
+
+  it("should return 404 Not Found if event ID does not exist for update", async () => {
+    const nonExistentId = "11111111-1111-1111-1111-111111111111";
+    const updates = { title: "Attempt to update non-existent" };
+    const response = await request(app)
+      .patch(`/api/v1/admin/events/${nonExistentId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send(updates);
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe("Event not found.");
+  });
+
+  it("should return 400 Bad Request for invalid event ID format during update", async () => {
+    const invalidId = "not-a-uuid-at-all";
+    const updates = { title: "Update with invalid ID" };
+    const response = await request(app)
+      .patch(`/api/v1/admin/events/${invalidId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send(updates);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Invalid event ID format.");
+  });
+
+  it("should return 400 Bad Request for invalid data type in update payload", async () => {
+    const updates = { date: "invalid-date-format" }; // Invalid date
+    const response = await request(app)
+      .patch(`/api/v1/admin/events/${eventToUpdate.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send(updates);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Date must be in YYYY-MM-DD format.");
+  });
+
+  it("should return 403 Forbidden if a non-admin user tries to update an event", async () => {
+    const updates = { title: "Non-admin update attempt" };
+    const response = await request(app)
+      .patch(`/api/v1/admin/events/${eventToUpdate.id}`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .send(updates);
+
+    expect(response.status).toBe(403);
+  });
+
+  it("should return 401 Unauthorized if no token is provided for update", async () => {
+    const updates = { title: "No token update" };
+    const response = await request(app)
+      .patch(`/api/v1/admin/events/${eventToUpdate.id}`)
+      .send(updates);
+
+    expect(response.status).toBe(401);
   });
 });

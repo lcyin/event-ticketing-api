@@ -3,6 +3,7 @@ import {
   createEvent,
   getAllEvents,
   getEventById,
+  updateEventDetails,
 } from "../controllers/adminController";
 import { authenticateToken } from "../middleware/auth";
 import { authorizeAdmin } from "../middleware/adminAuth";
@@ -211,5 +212,76 @@ router.get("/events", authenticateToken, authorizeAdmin, getAllEvents);
  *         description: Internal Server Error.
  */
 router.get("/events/:id", authenticateToken, authorizeAdmin, getEventById);
+
+/**
+ * @swagger
+ * /api/v1/admin/events/{id}:
+ *   patch:
+ *     summary: Update event details (Admin View)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The unique identifier of the event to update.
+ *     requestBody:
+ *       description: Fields to update for the event. Only include fields that need to be changed.
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               long_description:
+ *                 type: string
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               start_time:
+ *                 type: string
+ *               end_time:
+ *                 type: string
+ *               # ... include other updatable fields from the Event schema
+ *               categories:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *           example:
+ *             description: "The updated description for the event."
+ *             start_time: "15:00"
+ *             categories: ["Music", "Festival", "Family-Friendly"]
+ *     responses:
+ *       200:
+ *         description: Event updated successfully. Returns the updated event object.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Event'
+ *       400:
+ *         description: Bad Request (e.g., invalid ID format, validation errors in request body).
+ *       401:
+ *         description: Unauthorized.
+ *       403:
+ *         description: Forbidden.
+ *       404:
+ *         description: Event not found.
+ *       500:
+ *         description: Internal Server Error.
+ */
+router.patch(
+  "/events/:id",
+  authenticateToken,
+  authorizeAdmin,
+  updateEventDetails
+);
 
 export default router;
