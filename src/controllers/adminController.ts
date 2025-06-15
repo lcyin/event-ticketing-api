@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { getDataSource } from "../config/getDataSource";
 import { Event } from "../entities/Event";
 import { validate as isValidUUID } from "uuid";
+import { TicketType } from "../entities/TicketType";
 
 export const createEvent = async (req: Request, res: Response) => {
   const {
@@ -137,6 +138,77 @@ export const createEvent = async (req: Request, res: Response) => {
     // if (error.code === '23505') { // Example for PostgreSQL unique violation
     //   return res.status(409).json({ message: "Event with this title/date already exists." });
     // }
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const createTicketTypeForEvent = async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const { name, price, description, quantity } = req.body;
+
+    if (!isValidUUID(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID format." });
+    }
+
+    // Validate request body
+    if (!name || typeof name !== "string" || name.trim() === "") {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Ticket type name is required and must be a non-empty string.",
+        });
+    }
+    if (price === undefined || typeof price !== "number" || price < 0) {
+      return res
+        .status(400)
+        .json({
+          message: "Price is required and must be a non-negative number.",
+        });
+    }
+    if (
+      quantity === undefined ||
+      typeof quantity !== "number" ||
+      quantity < 0
+    ) {
+      return res
+        .status(400)
+        .json({
+          message: "Quantity is required and must be a non-negative number.",
+        });
+    }
+    if (description && typeof description !== "string") {
+      return res.status(400).json({ message: "Description must be a string." });
+    }
+
+    const eventRepository = getDataSource().getRepository(Event);
+    const event = await eventRepository.findOneBy({ id: eventId });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    const ticketTypeRepository = getDataSource().getRepository(TicketType);
+    const newTicketType = ticketTypeRepository.create({
+      eventId,
+      name,
+      price,
+      description,
+      quantity,
+      event, // Associate with the found event
+    });
+
+    const savedTicketType = await ticketTypeRepository.save(newTicketType);
+
+    return res.status(201).json({
+      ...savedTicketType,
+      eventId: savedTicketType.eventId, // Ensure eventId is in the response
+      createdAt: savedTicketType.createdAt.toISOString(),
+      updatedAt: savedTicketType.updatedAt.toISOString(),
+    });
+  } catch (error) {
+    console.error("Error creating ticket type for event:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

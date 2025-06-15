@@ -93,6 +93,24 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
  *         updated_at:
  *           type: string
  *           format: date-time
+ *     TicketType:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         eventId:
+ *           type: string
+ *           format: uuid
+ *         name:
+ *           type: string
+ *         price:
+ *           type: integer
+ *         description:
+ *           type: string
+ *           nullable: true
+ *         quantity:
+ *           type: integer
  *   securitySchemes:
  *     bearerAuth:
  *       type: http

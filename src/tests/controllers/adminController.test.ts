@@ -802,7 +802,7 @@ describe("Admin Controller - PATCH /api/v1/admin/events/:id", () => {
   });
 
   it("should return 404 Not Found if event ID does not exist for update", async () => {
-    const nonExistentId = "00000000-0000-0000-0000-000000000000";
+    const nonExistentId = "00000000-0000-0000-0000-000000000000"; // Standard nil UUID
     const updates = { title: "Attempt to update non-existent" };
     const response = await request(app)
       .patch(`/api/v1/admin/events/${nonExistentId}`)
@@ -913,22 +913,22 @@ describe("Admin Controller - DELETE /api/v1/admin/events/:id", () => {
     eventToDelete = await createEventForDeletion();
   });
 
-  // afterEach(async () => {
-  //   // Attempt to clean up if event wasn't deleted by the test, or if test failed before deletion
-  //   if (eventToDelete && eventToDelete.id) {
-  //     const stillExists = await eventRepository.findOneBy({
-  //       id: eventToDelete.id,
-  //     });
-  //     if (stillExists) {
-  //       await eventRepository.delete({ id: eventToDelete.id });
-  //     }
-  //   }
-  // });
+  afterEach(async () => {
+    // Attempt to clean up if event wasn't deleted by the test, or if test failed before deletion
+    if (eventToDelete && eventToDelete.id) {
+      const stillExists = await eventRepository.findOneBy({
+        id: eventToDelete.id,
+      });
+      if (stillExists) {
+        await eventRepository.delete({ id: eventToDelete.id });
+      }
+    }
+  });
 
-  // afterAll(async () => {
-  //   await userRepository.delete({ id: adminUser.id });
-  //   await userRepository.delete({ id: regularUser.id });
-  // });
+  afterAll(async () => {
+    await userRepository.delete({ id: adminUser.id });
+    await userRepository.delete({ id: regularUser.id });
+  });
 
   it("should delete an event successfully and return 204 No Content", async () => {
     const response = await request(app)
@@ -941,7 +941,7 @@ describe("Admin Controller - DELETE /api/v1/admin/events/:id", () => {
   });
 
   it("should return 404 Not Found if event ID does not exist for deletion", async () => {
-    const nonExistentId = "00000000-0000-0000-0000-000000000000";
+    const nonExistentId = "00000000-0000-0000-0000-000000000000"; // Standard nil UUID
     const response = await request(app)
       .delete(`/api/v1/admin/events/${nonExistentId}`)
       .set("Authorization", `Bearer ${adminToken}`);
