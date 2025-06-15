@@ -7,7 +7,11 @@ import { Event } from "../../entities/Event";
 import { generateToken } from "../../utils/jwt";
 import { authenticateToken } from "../../middleware/auth";
 import { authorizeAdmin } from "../../middleware/adminAuth";
-import { createEvent, getAllEvents } from "../../controllers/adminController";
+import {
+  createEvent,
+  getAllEvents,
+  getEventById,
+} from "../../controllers/adminController";
 
 const app: Express = express();
 app.use(express.json());
@@ -24,6 +28,12 @@ app.get(
   authenticateToken,
   authorizeAdmin,
   getAllEvents
+);
+app.get(
+  "/api/v1/admin/events/:id",
+  authenticateToken,
+  authorizeAdmin,
+  getEventById
 );
 
 describe("Admin Controller - POST /api/v1/admin/events", () => {
@@ -542,5 +552,140 @@ describe("Admin Controller - GET /api/v1/admin/events", () => {
         new Date(response.body.events[1].created_at).getTime()
       );
     }
+  });
+});
+
+describe("Admin Controller - GET /api/v1/admin/events/:id", () => {
+  const userRepository = getDataSource().getRepository(User);
+  const eventRepository = getDataSource().getRepository(Event);
+
+  let adminUser: User;
+  let regularUser: User;
+  let adminToken: string;
+  let userToken: string;
+  let testEvent: Event;
+
+  const createTestEvent = async (props: Partial<Event> = {}) => {
+    const defaultEvent = {
+      title: "Specific Test Event " + Date.now(),
+      description: "A detailed description for the specific event.",
+      longDescription:
+        "A very long and comprehensive description of the event, potentially with rich content.",
+      date: "2025-08-15",
+      startTime: "10:00",
+      endTime: "18:00",
+      venue: "Specific Test Venue",
+      location: "Specific Test City, ST",
+      address: "456 Specific St",
+      organizer: "Specific Test Org",
+      imageUrl: "http://example.com/specific_image.jpg",
+      priceRange: "$50 - $150",
+      categories: ["Specific", "Test"],
+      status: "published",
+      ...props,
+    };
+    return eventRepository.save(eventRepository.create(defaultEvent));
+  };
+
+  beforeAll(async () => {
+    const adminPasswordHash = await bcrypt.hash("adminPassGetOne123", 10);
+    adminUser = userRepository.create({
+      email: "admin_get_one@example.com" + Date.now(),
+      passwordHash: adminPasswordHash,
+      firstName: "Admin",
+      lastName: "GetOne",
+      role: "admin",
+    });
+    await userRepository.save(adminUser);
+    adminToken = generateToken({
+      id: adminUser.id,
+      email: adminUser.email,
+      role: adminUser.role,
+    });
+
+    const userPasswordHash = await bcrypt.hash("userPassGetOne123", 10);
+    regularUser = userRepository.create({
+      email: "user_get_one@example.com" + Date.now(),
+      passwordHash: userPasswordHash,
+      firstName: "Regular",
+      lastName: "GetOne",
+      role: "user",
+    });
+    await userRepository.save(regularUser);
+    userToken = generateToken({
+      id: regularUser.id,
+      email: regularUser.email,
+      role: regularUser.role,
+    });
+
+    testEvent = await createTestEvent();
+  });
+
+  afterAll(async () => {
+    await eventRepository.delete({ id: testEvent.id });
+    await userRepository.delete({ id: adminUser.id });
+    await userRepository.delete({ id: regularUser.id });
+  });
+
+  it("should return event details for a valid ID when called by an admin", async () => {
+    const response = await request(app)
+      .get(`/api/v1/admin/events/${testEvent.id}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(testEvent.id);
+    expect(response.body.title).toBe(testEvent.title);
+    expect(response.body.description).toBe(testEvent.description);
+    expect(response.body.long_description).toBe(testEvent.longDescription);
+    expect(response.body.date).toBe(testEvent.date);
+    // ... check other fields as needed
+  });
+
+  it("should return 404 Not Found if event ID does not exist", async () => {
+    const nonExistentId = "00000000-0000-0000-0000-000000000000"; // Valid UUID format, but non-existent
+    const response = await request(app)
+      .get(`/api/v1/admin/events/${nonExistentId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe("Event not found.");
+  });
+
+  it("should return 400 Bad Request if event ID is not a valid UUID", async () => {
+    const invalidId = "not-a-uuid";
+    const response = await request(app)
+      .get(`/api/v1/admin/events/${invalidId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Invalid event ID format.");
+  });
+
+  it("should return 403 Forbidden if a non-admin user tries to get an event by ID", async () => {
+    const response = await request(app)
+      .get(`/api/v1/admin/events/${testEvent.id}`)
+      .set("Authorization", `Bearer ${userToken}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe(
+      "Forbidden: Administrator access required."
+    );
+  });
+
+  it("should return 401 Unauthorized if no token is provided", async () => {
+    const response = await request(app).get(
+      `/api/v1/admin/events/${testEvent.id}`
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("No token provided");
+  });
+
+  it("should return 401 Unauthorized if an invalid token is provided", async () => {
+    const response = await request(app)
+      .get(`/api/v1/admin/events/${testEvent.id}`)
+      .set("Authorization", "Bearer invalid-token-string");
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("Invalid token");
   });
 });

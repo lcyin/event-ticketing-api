@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { getDataSource } from "../config/getDataSource";
 import { Event } from "../entities/Event";
+import { validate as isValidUUID } from "uuid";
 
 export const createEvent = async (req: Request, res: Response) => {
   const {
@@ -139,6 +140,47 @@ export const createEvent = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const getEventById = async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+
+    if (!isValidUUID(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID format." });
+    }
+
+    const eventRepository = getDataSource().getRepository(Event);
+    const event = await eventRepository.findOneBy({ id: eventId });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    return res.status(200).json({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      long_description: event.longDescription,
+      date: event.date,
+      start_time: event.startTime,
+      end_time: event.endTime,
+      venue: event.venue,
+      location: event.location,
+      address: event.address,
+      organizer: event.organizer,
+      image_url: event.imageUrl,
+      price_range: event.priceRange,
+      categories: event.categories,
+      status: event.status,
+      created_at: event.createdAt.toISOString(),
+      updated_at: event.updatedAt.toISOString(),
+    });
+  } catch (error) {
+    console.error("Error fetching event by ID for admin:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 
 export const getAllEvents = async (req: Request, res: Response) => {
   try {

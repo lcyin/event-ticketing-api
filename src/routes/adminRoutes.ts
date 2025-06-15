@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { createEvent, getAllEvents } from "../controllers/adminController";
+import {
+  createEvent,
+  getAllEvents,
+  getEventById,
+} from "../controllers/adminController";
 import { authenticateToken } from "../middleware/auth";
 import { authorizeAdmin } from "../middleware/adminAuth";
 
@@ -163,5 +167,49 @@ router.post("/events", authenticateToken, authorizeAdmin, createEvent);
  *         description: Internal Server Error
  */
 router.get("/events", authenticateToken, authorizeAdmin, getAllEvents);
+
+/**
+ * @swagger
+ * /api/v1/admin/events/{id}:
+ *   get:
+ *     summary: Get a specific event by ID (Admin View)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The unique identifier of the event.
+ *     responses:
+ *       200:
+ *         description: Detailed information about the event.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Event'
+ *       400:
+ *         description: Invalid UUID format for the ID.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid event ID format.
+ *       401:
+ *         description: Unauthorized (no token or invalid token).
+ *       403:
+ *         description: Forbidden (user is not an administrator).
+ *       404:
+ *         description: No event exists with the provided ID.
+ *       500:
+ *         description: Internal Server Error.
+ */
+router.get("/events/:id", authenticateToken, authorizeAdmin, getEventById);
 
 export default router;
