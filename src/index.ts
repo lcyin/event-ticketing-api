@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import adminRoutes from "./routes/adminRoutes"; // Import admin routes
+import publicEventRoutes from "./routes/publicEventRoutes"; // Import public event routes
 
 dotenv.config();
 
@@ -34,7 +35,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ["./src/routes/*.ts", "./src/routes/adminRoutes.ts"], // Include admin routes
+  apis: ["./src/routes/*.ts"],
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
@@ -122,6 +123,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/admin", adminRoutes); // Mount admin routes
+app.use("/api/v1", publicEventRoutes); // Mount public event routes
 
 // Initialize database connection
 AppDataSource.initialize()
