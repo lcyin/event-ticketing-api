@@ -69,8 +69,8 @@ export const getPublicEvents = async (req: Request, res: Response) => {
 
     if (category && typeof category === "string") {
       // Use array containment operator @> for checking if category exists in event.categories
-      queryBuilder.andWhere("event.categories @> ARRAY[:category]::text[]", {
-        category: [category],
+      queryBuilder.andWhere("event.categories @> :categories::text[]", {
+        categories: [category],
       });
     }
 

@@ -50,7 +50,7 @@ export class Event {
   @Column({ name: "price_range" })
   priceRange: string;
 
-  @Column("simple-array")
+  @Column({ type: "text", array: true })
   categories: string[];
 
   @Column({ type: "varchar", length: 50, default: "draft" }) // e.g., draft, published, archived
