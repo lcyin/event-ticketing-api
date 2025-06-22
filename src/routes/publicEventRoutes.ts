@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { getPublicEvents } from "../controllers/publicEventController";
+import {
+  getPublicEvents,
+  getPublicEventById,
+} from "../controllers/publicEventController";
 
 const router = Router();
 
@@ -100,5 +103,43 @@ const router = Router();
  *         description: Internal Server Error.
  */
 router.get("/events", getPublicEvents);
+
+/**
+ * @swagger
+ * /api/v1/events/{eventId}:
+ *   get:
+ *     summary: Get a Single Event's Details
+ *     tags: [Events]
+ *     description: Retrieves all details for a single event, including its ticket types. This endpoint is public.
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The unique identifier of the event.
+ *     responses:
+ *       200:
+ *         description: The full Event object, including the nested ticketTypes array.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Event'
+ *                 - type: object
+ *                   properties:
+ *                     ticketTypes:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/TicketType'
+ *       400:
+ *         description: Invalid event ID format.
+ *       404:
+ *         description: No event with the specified eventId was found.
+ *       500:
+ *         description: Internal Server Error.
+ */
+router.get("/events/:eventId", getPublicEventById);
 
 export default router;

@@ -2,13 +2,18 @@ import request from "supertest";
 import express, { Express } from "express";
 import { getDataSource } from "../../config/getDataSource";
 import { Event } from "../../entities/Event";
-import { getPublicEvents } from "../../controllers/publicEventController";
+import {
+  getPublicEvents,
+  getPublicEventById,
+} from "../../controllers/publicEventController";
+import { TicketType } from "../../entities/TicketType";
 
 const app: Express = express();
 app.use(express.json());
 
 // Mount the public event route
 app.get("/api/v1/events", getPublicEvents);
+app.get("/api/v1/events/:eventId", getPublicEventById);
 
 describe("Public Event Controller - GET /api/v1/events", () => {
   const eventRepository = getDataSource().getRepository(Event);
@@ -200,5 +205,96 @@ describe("Public Event Controller - GET /api/v1/events", () => {
     expect(response.body.data).toEqual([]);
     expect(response.body.pagination.totalItems).toBe(0);
     expect(response.body.pagination.totalPages).toBe(0);
+  });
+});
+
+describe("Public Event Controller - GET /api/v1/events/:eventId", () => {
+  const eventRepository = getDataSource().getRepository(Event);
+  const ticketTypeRepository = getDataSource().getRepository(TicketType);
+
+  let testEvent: Event;
+  let ticketType1: TicketType;
+  let ticketType2: TicketType;
+
+  beforeAll(async () => {
+    // Create a test event
+    testEvent = await eventRepository.save(
+      eventRepository.create({
+        title: "Detailed Test Event",
+        description: "A test event with all the details.",
+        longDescription: "A very long description for a very detailed event.",
+        date: "2025-12-25",
+        startTime: "18:00:00Z",
+        endTime: "22:00:00Z",
+        venue: "Test Hall",
+        location: "Testville, TS",
+        address: "123 Test St, Testville, TS 54321",
+        organizer: "Testers United",
+        imageUrl: "https://example.com/detailed-event.png",
+        priceRange: "$50 - $150",
+        categories: ["Test", "Details"],
+        status: "published",
+      })
+    );
+
+    // Create ticket types for the event
+    ticketType1 = await ticketTypeRepository.save(
+      ticketTypeRepository.create({
+        eventId: testEvent.id,
+        name: "General Admission",
+        price: 5000,
+        description: "Access to general areas.",
+        quantity: 100,
+      })
+    );
+
+    ticketType2 = await ticketTypeRepository.save(
+      ticketTypeRepository.create({
+        eventId: testEvent.id,
+        name: "VIP",
+        price: 15000,
+        description: "VIP access.",
+        quantity: 20,
+      })
+    );
+  });
+
+  it("should return the full event details including ticket types for a valid ID", async () => {
+    const response = await request(app).get(`/api/v1/events/${testEvent.id}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(testEvent.id);
+    expect(response.body.title).toBe("Detailed Test Event");
+    expect(response.body.longDescription).toBe(
+      "A very long description for a very detailed event."
+    );
+    expect(response.body).toHaveProperty("ticketTypes");
+    expect(response.body.ticketTypes).toBeInstanceOf(Array);
+    expect(response.body.ticketTypes.length).toBe(2);
+
+    // Check if the ticket types are correct
+    expect(response.body.ticketTypes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: ticketType1.id,
+          name: "General Admission",
+        }),
+        expect.objectContaining({ id: ticketType2.id, name: "VIP" }),
+      ])
+    );
+  });
+
+  it("should return 404 Not Found if event ID does not exist", async () => {
+    const nonExistentId = "00000000-0000-0000-0000-000000000000";
+    const response = await request(app).get(`/api/v1/events/${nonExistentId}`);
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe("Event not found.");
+  });
+
+  it("should return 400 Bad Request if event ID is not a valid UUID", async () => {
+    const invalidId = "not-a-real-uuid";
+    const response = await request(app).get(`/api/v1/events/${invalidId}`);
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Invalid event ID format.");
   });
 });

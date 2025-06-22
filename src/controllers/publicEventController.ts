@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Brackets } from "typeorm";
 import { getDataSource } from "../config/getDataSource";
 import { Event } from "../entities/Event";
+import { validate as isValidUUID } from "uuid";
 
 const formatDateToISO = (
   dateStr: string,
@@ -118,6 +119,57 @@ export const getPublicEvents = async (req: Request, res: Response) => {
     // if (error.message.includes("invalid input syntax for type uuid")) {
     //   return res.status(400).json({ message: "Invalid parameter causing database error." });
     // }
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getPublicEventById = async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!isValidUUID(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID format." });
+    }
+
+    const eventRepository = getDataSource().getRepository(Event);
+    const event = await eventRepository.findOne({
+      where: { id: eventId },
+      relations: ["ticketTypes"],
+    });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    // Format the response to match the specification
+    const formattedResponse = {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      longDescription: event.longDescription,
+      imageUrl: event.imageUrl,
+      categories: event.categories,
+      startTime: formatDateToISO(event.date, event.startTime),
+      endTime: formatDateToISO(event.date, event.endTime),
+      venue: event.venue,
+      location: event.location,
+      address: event.address,
+      organizer: event.organizer,
+      priceRange: event.priceRange,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
+      ticketTypes: event.ticketTypes.map((tt) => ({
+        id: tt.id,
+        name: tt.name,
+        price: tt.price,
+        description: tt.description,
+        quantity: tt.quantity,
+      })),
+    };
+
+    return res.status(200).json(formattedResponse);
+  } catch (error) {
+    console.error("Error fetching single public event:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
