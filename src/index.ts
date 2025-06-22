@@ -9,6 +9,7 @@ import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import adminRoutes from "./routes/adminRoutes"; // Import admin routes
 import publicEventRoutes from "./routes/publicEventRoutes"; // Import public event routes
+import cartRoutes from "./routes/cartRoutes"; // Import cart routes
 
 dotenv.config();
 
@@ -124,6 +125,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/admin", adminRoutes); // Mount admin routes
 app.use("/api/v1", publicEventRoutes); // Mount public event routes
+app.use("/api/v1/cart", cartRoutes); // Mount cart routes
 
 // Initialize database connection
 AppDataSource.initialize()
