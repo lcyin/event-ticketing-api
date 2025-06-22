@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addItemToCart } from "../controllers/cartController";
+import { addItemToCart, getCartContents } from "../controllers/cartController";
 import { authenticateToken } from "../middleware/auth";
 
 const router = Router();
@@ -48,5 +48,48 @@ const router = Router();
  *         description: Not Found (ticket type does not exist).
  */
 router.post("/items", authenticateToken, addItemToCart);
+
+/**
+ * @swagger
+ * /api/v1/cart:
+ *   get:
+ *     summary: Get cart contents
+ *     tags: [Cart]
+ *     description: Fetches all items currently in the user's cart, including item details and a subtotal.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success. Returns the current cart contents.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       ticket_type_id:
+ *                         type: string
+ *                         format: uuid
+ *                       quantity:
+ *                         type: integer
+ *                       details:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                           price:
+ *                             type: string
+ *                 totalItems:
+ *                   type: integer
+ *                 subtotal:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized (user not logged in).
+ */
+router.get("/", authenticateToken, getCartContents);
 
 export default router;

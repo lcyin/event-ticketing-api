@@ -1,3 +1,4 @@
+import { In } from "typeorm";
 import { getDataSource } from "../config/getDataSource";
 import { TicketType } from "../entities/TicketType";
 
@@ -16,7 +17,18 @@ export interface Cart {
   items: CartItem[];
   totalItems: number;
 }
+export interface CartItemWithDetails extends CartItem {
+  details: {
+    name: string;
+    price: string; // e.g., "55.00"
+  };
+}
 
+export interface DetailedCart {
+  items: CartItemWithDetails[];
+  totalItems: number;
+  subtotal: string; // e.g., "110.00"
+}
 const carts: { [userId: string]: Cart } = {};
 
 /**
@@ -29,6 +41,60 @@ export const getCart = (userId: string): Cart => {
     carts[userId] = { items: [], totalItems: 0 };
   }
   return carts[userId];
+};
+
+/**
+ * Retrieves the cart for a given user with detailed item information.
+ * @param userId The ID of the user.
+ * @returns The user's cart with details and subtotal.
+ */
+export const getCartContents = async (
+  userId: string
+): Promise<DetailedCart> => {
+  const cart = getCart(userId);
+  if (cart.items.length === 0) {
+    return { items: [], totalItems: 0, subtotal: "0.00" };
+  }
+
+  const ticketTypeRepository = getDataSource().getRepository(TicketType);
+  const ticketTypeIds = cart.items.map((item) => item.ticket_type_id);
+
+  // Fetch all needed ticket types in one query
+  const ticketTypes = await ticketTypeRepository.find({
+    where: { id: In(ticketTypeIds) },
+  });
+  const ticketTypeData = ticketTypes.map((ticketType) => {
+    return {
+      ...ticketType,
+      price: ticketType.price / 100, // Convert price from cents to dollars
+      priceTotal: ticketType.price * ticketType.quantity,
+    };
+  });
+  const ticketTypeMap = new Map(ticketTypes.map((tt) => [tt.id, tt]));
+
+  let subtotal = 0;
+  const detailedItems: CartItemWithDetails[] = [];
+
+  for (const item of cart.items) {
+    const ticketType = ticketTypeMap.get(item.ticket_type_id);
+    if (ticketType) {
+      const itemPrice = ticketType.price; // price is in cents
+      subtotal += itemPrice * item.quantity;
+      detailedItems.push({
+        ...item,
+        details: {
+          name: ticketType.name,
+          price: (itemPrice / 100).toFixed(2),
+        },
+      });
+    }
+  }
+
+  return {
+    items: detailedItems,
+    totalItems: cart.totalItems,
+    subtotal: (subtotal / 100).toFixed(2),
+  };
 };
 
 /**

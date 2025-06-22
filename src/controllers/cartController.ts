@@ -42,3 +42,20 @@ export const addItemToCart = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const getCartContents = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      // This should technically be caught by middleware, but as a safeguard:
+      return res.status(401).json({ error: "User not authenticated." });
+    }
+
+    const cartContents = await cartService.getCartContents(userId);
+
+    return res.status(200).json(cartContents);
+  } catch (error: any) {
+    console.error("Error getting cart contents:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
