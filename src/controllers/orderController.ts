@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import { getDataSource } from "../config/getDataSource";
 import { Order } from "../entities/Order";
+import { validate as isValidUUID } from "uuid";
 import { TicketType } from "../entities/TicketType";
 // Assuming you have a cart service:
 import * as cartService from "../services/cartService";
+import { buildCreateOrderDto } from "../helpers/build-order.helper";
 
 export const createOrder = async (req: Request, res: Response) => {
   const { tickets, customer_info, billing_address, payment_info } = req.body;
@@ -80,18 +82,16 @@ export const createOrder = async (req: Request, res: Response) => {
     }
 
     // 3. Create Order record
-    const newOrder = orderRepository.create({
-      userId,
-      tickets: ticketDetails, // Store ticket details in the order
-      customerInfo: customer_info,
-      billingAddress: billing_address,
-      paymentInfo: payment_info,
-      totalAmount: totalAmount / 100, // Assuming prices are in cents, store in dollars.
-      status: "completed", // Or 'pending' if you have further processing
-      eventName: "Some Event Name", // You need to derive these from the ticket details.
-      eventDate: "2024-01-01",
-      eventLocation: "Some Location",
-    });
+    const newOrder = orderRepository.create(
+      buildCreateOrderDto({
+        userId,
+        ticketDetails,
+        customer_info,
+        billing_address,
+        payment_info,
+        totalAmount,
+      })
+    );
 
     const savedOrder = await orderRepository.save(newOrder);
 
@@ -117,5 +117,48 @@ export const createOrder = async (req: Request, res: Response) => {
       .json({ message: error.message || "Checkout failed" });
   } finally {
     await queryRunner.release();
+  }
+};
+
+export const getUserOrderHistory = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId || !isValidUUID(userId)) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { limit = 20, offset = 0 } = req.query;
+    const limitNumber = Number(limit);
+    const offsetNumber = Number(offset);
+
+    if (isNaN(limitNumber) || limitNumber <= 0 || limitNumber > 100) {
+      return res
+        .status(400)
+        .json({ message: "Invalid limit. Must be between 1 and 100" });
+    }
+
+    if (isNaN(offsetNumber) || offsetNumber < 0) {
+      return res.status(400).json({ message: "Invalid offset. Must be >= 0" });
+    }
+
+    const orderRepository = getDataSource().getRepository(Order);
+    const [orders, total] = await orderRepository.findAndCount({
+      where: { userId },
+      order: { createdAt: "DESC" },
+      take: limitNumber,
+      skip: offsetNumber,
+    });
+
+    return res.status(200).json({
+      total,
+      limit: limitNumber,
+      offset: offsetNumber,
+      orders,
+    });
+  } catch (error) {
+    console.error("Error fetching user order history:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to retrieve order history" });
   }
 };

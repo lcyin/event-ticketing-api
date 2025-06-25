@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/auth";
 import { createOrder } from "../controllers/orderController";
+import { getUserOrderHistory } from "../controllers/orderController";
 
 const router = Router();
 
@@ -59,5 +60,39 @@ const router = Router();
  *         description: Unauthorized
  */
 router.post("/orders", authenticateToken, createOrder);
+
+/**
+ * @swagger
+ * /api/orders:
+ *   get:
+ *     summary: Get User's Order History
+ *     description: Retrieves a list of all orders placed by the currently authenticated user.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of orders to return per page.
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of orders to skip for pagination.
+ *     responses:
+ *       200:
+ *         description: A paginated list of orders.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Order'  # Assuming you have an Order schema defined
+ */
+router.get("/orders", authenticateToken, getUserOrderHistory);
 
 export default router;
