@@ -162,3 +162,34 @@ export const getUserOrderHistory = async (req: Request, res: Response) => {
       .json({ message: "Failed to retrieve order history" });
   }
 };
+
+export const getOrderById = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const user = req.user;
+
+    if (!user?.id) {
+      // This should be caught by authenticateToken middleware, but it's a good safeguard.
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    if (!isValidUUID(orderId)) {
+      return res.status(400).json({ message: "Invalid order ID format." });
+    }
+
+    const orderRepository = getDataSource().getRepository(Order);
+
+    const order = await orderRepository.findOneBy({ id: orderId });
+
+    // If order doesn't exist, or if the user is not an admin and not the owner of the order, return 404.
+    // This prevents leaking information about the existence of an order to unauthorized users.
+    if (!order || (user.role !== "admin" && order.userId !== user.id)) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    return res.status(200).json(order);
+  } catch (error) {
+    console.error("Error fetching order by ID:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

@@ -114,6 +114,72 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
  *           nullable: true
  *         quantity:
  *           type: integer
+ *     CustomerInfo:
+ *       type: object
+ *       properties:
+ *         firstName:
+ *           type: string
+ *         lastName:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         phone:
+ *           type: string
+ *     BillingAddress:
+ *       type: object
+ *       properties:
+ *         address:
+ *           type: string
+ *         city:
+ *           type: string
+ *         state:
+ *           type: string
+ *         zipCode:
+ *           type: string
+ *     PaymentInfo:
+ *       type: object
+ *       properties:
+ *         lastFour:
+ *           type: string
+ *         cardholderName:
+ *           type: string
+ *     Order:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         userId:
+ *           type: string
+ *           format: uuid
+ *         eventName:
+ *           type: string
+ *         eventDate:
+ *           type: string
+ *           format: date
+ *         eventLocation:
+ *           type: string
+ *         tickets:
+ *           type: array
+ *           items:
+ *             type: object
+ *         customerInfo:
+ *           $ref: '#/components/schemas/CustomerInfo'
+ *         billingAddress:
+ *           $ref: '#/components/schemas/BillingAddress'
+ *         paymentInfo:
+ *           $ref: '#/components/schemas/PaymentInfo'
+ *         totalAmount:
+ *           type: number
+ *         status:
+ *           type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
  *   securitySchemes:
  *     bearerAuth:
  *       type: http

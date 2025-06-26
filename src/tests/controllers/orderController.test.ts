@@ -11,6 +11,7 @@ import { authenticateToken } from "../../middleware/auth";
 import {
   createOrder,
   getUserOrderHistory,
+  getOrderById,
 } from "../../controllers/orderController";
 import { DataSource } from "typeorm";
 import { buildCreateOrderDto } from "../../helpers/build-order.helper";
@@ -21,6 +22,7 @@ app.use(express.json());
 // Mount the route to be tested
 app.post("/api/orders", authenticateToken, createOrder);
 app.get("/api/orders", authenticateToken, getUserOrderHistory);
+app.get("/api/orders/:orderId", authenticateToken, getOrderById);
 
 describe("Order Controller - POST /api/orders", () => {
   it("should create an order successfully with a valid request", async () => {
@@ -122,6 +124,162 @@ describe("Order Controller - GET /api/orders", () => {
       ],
       total: 1,
     });
+  });
+});
+
+describe("Order Controller - GET /api/orders/:orderId", () => {
+  let regularUser: User;
+  let adminUser: User;
+  let otherUser: User;
+  let regularUserToken: string;
+  let adminToken: string;
+  let otherUserToken: string;
+  let userOrder: Order;
+
+  beforeAll(async () => {
+    const ds = getDataSource();
+    const userRepository = ds.getRepository(User);
+    const orderRepository = ds.getRepository(Order);
+    const eventRepository = ds.getRepository(Event);
+    const ticketTypeRepository = ds.getRepository(TicketType);
+
+    // Create users
+    const regularPasswordHash = await bcrypt.hash("regularPass123", 10);
+    regularUser = await userRepository.save(
+      userRepository.create({
+        email: "regular.order.get@test.com" + Date.now(),
+        passwordHash: regularPasswordHash,
+        role: "user",
+      })
+    );
+    regularUserToken = generateToken({
+      id: regularUser.id,
+      email: regularUser.email,
+      role: regularUser.role,
+    });
+
+    const adminPasswordHash = await bcrypt.hash("adminPass123", 10);
+    adminUser = await userRepository.save(
+      userRepository.create({
+        email: "admin.order.get@test.com" + Date.now(),
+        passwordHash: adminPasswordHash,
+        role: "admin",
+      })
+    );
+    adminToken = generateToken({
+      id: adminUser.id,
+      email: adminUser.email,
+      role: adminUser.role,
+    });
+
+    const otherPasswordHash = await bcrypt.hash("otherPass123", 10);
+    otherUser = await userRepository.save(
+      userRepository.create({
+        email: "other.order.get@test.com" + Date.now(),
+        passwordHash: otherPasswordHash,
+        role: "user",
+      })
+    );
+    otherUserToken = generateToken({
+      id: otherUser.id,
+      email: otherUser.email,
+      role: otherUser.role,
+    });
+
+    // Create event and ticket type for order
+    const testEvent = await eventRepository.save(
+      eventRepository.create({
+        title: "Order Get Test Event",
+        date: "2029-02-01",
+        venue: "Order Get Venue",
+        location: "Order Get Location",
+        imageUrl: "http://example.com/order-get.jpg",
+        priceRange: "$10-$100",
+        categories: ["OrderGetTest"],
+      })
+    );
+    const generalTicket = await ticketTypeRepository.save(
+      ticketTypeRepository.create({
+        eventId: testEvent.id,
+        name: "General",
+        price: 2500, // $25.00 in cents
+        quantity: 100,
+      })
+    );
+
+    // Create an order for the regular user
+    const payload = getMockOrderPayload({ generalTicket });
+    const orderDto = buildCreateOrderDto({
+      userId: regularUser.id,
+      ticketDetails: [
+        {
+          id: generalTicket.id,
+          name: "General",
+          price: 2500,
+          quantity: 2,
+        },
+      ],
+      customer_info: payload.customer_info,
+      billing_address: payload.billing_address,
+      payment_info: payload.payment_info,
+      totalAmount: 5000,
+    });
+    userOrder = await orderRepository.save(orderRepository.create(orderDto));
+  });
+
+  it("should return the order details for the order owner", async () => {
+    const response = await request(app)
+      .get(`/api/orders/${userOrder.id}`)
+      .set("Authorization", `Bearer ${regularUserToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(userOrder.id);
+    expect(response.body.userId).toBe(regularUser.id);
+  });
+
+  it("should return the order details for an admin", async () => {
+    const response = await request(app)
+      .get(`/api/orders/${userOrder.id}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(userOrder.id);
+  });
+
+  it("should return 404 if a user tries to access an order they do not own", async () => {
+    const response = await request(app)
+      .get(`/api/orders/${userOrder.id}`)
+      .set("Authorization", `Bearer ${otherUserToken}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBe("Order not found.");
+  });
+
+  it("should return 404 for a non-existent orderId", async () => {
+    const nonExistentId = "00000000-0000-0000-0000-000000000000";
+    const response = await request(app)
+      .get(`/api/orders/${nonExistentId}`)
+      .set("Authorization", `Bearer ${regularUserToken}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBe("Order not found.");
+  });
+
+  it("should return 400 for an invalid orderId format", async () => {
+    const invalidId = "not-a-uuid";
+    const response = await request(app)
+      .get(`/api/orders/${invalidId}`)
+      .set("Authorization", `Bearer ${regularUserToken}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Invalid order ID format.");
+  });
+
+  it("should return 401 if no token is provided", async () => {
+    const response = await request(app).get(`/api/orders/${userOrder.id}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe("No token provided");
   });
 });
 

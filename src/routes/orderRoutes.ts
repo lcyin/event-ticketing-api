@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/auth";
-import { createOrder } from "../controllers/orderController";
-import { getUserOrderHistory } from "../controllers/orderController";
+import {
+  createOrder,
+  getUserOrderHistory,
+  getOrderById,
+} from "../controllers/orderController";
 
 const router = Router();
 
@@ -94,5 +97,42 @@ router.post("/orders", authenticateToken, createOrder);
  *                 $ref: '#/components/schemas/Order'  # Assuming you have an Order schema defined
  */
 router.get("/orders", authenticateToken, getUserOrderHistory);
+
+/**
+ * @swagger
+ * /api/orders/{orderId}:
+ *   get:
+ *     summary: Get Order Details
+ *     description: Retrieves the details for a single, specific order. User must be the owner of the order or an admin.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The unique identifier of the order.
+ *     responses:
+ *       200:
+ *         description: OK (Success). Returns the full order object.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Order'
+ *       404:
+ *         description: Not Found. The orderId does not exist or the user is not authorized to view it.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Order not found."
+ */
+router.get("/orders/:orderId", authenticateToken, getOrderById);
 
 export default router;
