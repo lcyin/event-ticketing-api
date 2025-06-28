@@ -10,11 +10,11 @@ dotenv.config();
 
 export const TestDataSource = new DataSource({
   type: "postgres",
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5432"),
-  username: process.env.DB_USERNAME || "postgres",
-  password: process.env.DB_PASSWORD || "postgres",
-  database: process.env.TEST_DB_NAME || "event_ticketing_test",
+  host: process.env.POSTGRES_HOST || "localhost",
+  port: parseInt(process.env.POSTGRES_PORT || "5432"),
+  username: process.env.POSTGRES_USER || "postgres",
+  password: process.env.POSTGRES_PASSWORD || "postgres",
+  database: process.env.POSTGRES_DB || "event_ticketing_test",
   synchronize: true, // Always synchronize for tests
   logging: false, // Disable logging for tests
   entities: [Event, TicketType, FAQ, Order, User],
