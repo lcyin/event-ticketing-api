@@ -3,8 +3,18 @@ name: Run Tests
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+      - "docs/**"
   pull_request:
     branches: [master]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+      - "docs/**"
 
 jobs:
   test:
