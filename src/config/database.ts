@@ -1,11 +1,5 @@
 import { DataSource } from "typeorm";
-import { Event } from "../entities/Event";
-import { TicketType } from "../entities/TicketType";
-import { FAQ } from "../entities/FAQ";
-import { Order } from "../entities/Order";
-import { User } from "../entities/User";
 import dotenv from "dotenv";
-import { OrderItem } from "../entities/OrderItem";
 
 dotenv.config();
 
