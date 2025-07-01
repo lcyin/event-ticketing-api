@@ -1,8 +1,4 @@
 import { TestDataSource } from "../config/test-database";
-import { Event } from "../entities/Event";
-import { TicketType } from "../entities/TicketType";
-import { FAQ } from "../entities/FAQ";
-import { Order } from "../entities/Order";
 
 // Global setup - runs once before all tests
 beforeAll(async () => {

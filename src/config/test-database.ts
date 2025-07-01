@@ -5,6 +5,7 @@ import { FAQ } from "../entities/FAQ";
 import { Order } from "../entities/Order";
 import { User } from "../entities/User";
 import dotenv from "dotenv";
+import { OrderItem } from "../entities/OrderItem";
 
 dotenv.config();
 
@@ -17,7 +18,7 @@ export const TestDataSource = new DataSource({
   database: process.env.POSTGRES_DB || "event_ticketing_test",
   synchronize: true, // Always synchronize for tests
   logging: false, // Disable logging for tests
-  entities: [Event, TicketType, FAQ, Order, User],
+  entities: ["src/entities/*.ts"],
   migrations: ["src/migrations/*.ts"],
   subscribers: ["src/subscribers/*.ts"],
 });
