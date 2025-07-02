@@ -12,7 +12,7 @@ export const AppDataSource = new DataSource({
   database: process.env.POSTGRES_DB || "event_ticketing",
   synchronize: process.env.NODE_ENV === "development",
   logging: process.env.NODE_ENV === "development",
-  entities: ["src/entities/*.ts"],
-  migrations: ["src/migrations/*.ts"],
-  subscribers: ["src/subscribers/*.ts"],
+  entities: ["dist/entities/*.js"],
+  migrations: ["dist/migrations/*.js"],
+  subscribers: ["dist/subscribers/*.ts"],
 });
