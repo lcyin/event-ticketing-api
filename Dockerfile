@@ -1,20 +1,36 @@
-# Use the official Node.js image as the base image
-FROM node:18
+# Stage 1: Build
+FROM node:18 AS builder
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json to the working directory
+# Copy package.json and package-lock.json
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy the rest of the application code to the working directory
+# Copy the rest of the application code
 COPY . .
 
-# Expose the port the app runs on
+# Compile TypeScript to JavaScript
+RUN npm run build
+
+# Stage 2: Runtime
+FROM node:18
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy only the compiled JavaScript code and package files
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Expose the application port
 EXPOSE 3000
 
-# Define the command to run the application
-CMD ["npm", "start"]
+# Run the application
+CMD ["node", "dist/index.js"]
