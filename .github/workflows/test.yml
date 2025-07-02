@@ -31,6 +31,7 @@ jobs:
           POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpassword
           POSTGRES_DB: testdb
+          TRIGGER: 20250702
         # Options to wait for the database to be ready
         options: >-
           --health-cmd pg_isready
