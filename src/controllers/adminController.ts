@@ -2,10 +2,11 @@ import { Request, Response } from "express";
 import { getDataSource } from "../config/getDataSource";
 import { Event } from "../entities/Event";
 import { validate as isValidUUID } from "uuid";
-import { createEventDB } from "../services/eventService";
+import { createEventDB, updateEventDB } from "../services/eventService";
 import { createTicketTypeDB } from "../services/ticketTypeService";
 import { validateCreateEventData } from "../helpers/validate-create-event-data.helper";
 import { validateCreateTicketTypeData } from "../helpers/validate-create-ticket-type-data.helper";
+import { validateUpdateEventData } from "../helpers/validate-update-event-data.helper";
 
 export const createEvent = async (req: Request, res: Response) => {
   const eventData = validateCreateEventData(req.body);
@@ -208,116 +209,15 @@ export const deleteEvent = async (req: Request, res: Response) => {
 };
 
 export const updateEventDetails = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: "Invalid event ID format." });
+  }
+
   try {
-    const eventId = req.params.id;
-    const updates = req.body;
-
-    if (!isValidUUID(eventId)) {
-      return res.status(400).json({ message: "Invalid event ID format." });
-    }
-
-    const eventRepository = getDataSource().getRepository(Event);
-    let event = await eventRepository.findOneBy({ id: eventId });
-
-    if (!event) {
-      return res.status(404).json({ message: "Event not found." });
-    }
-
-    // --- Validation for updatable fields ---
-    if (
-      updates.title !== undefined &&
-      (typeof updates.title !== "string" || updates.title.trim() === "")
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Title must be a non-empty string." });
-    }
-    if (
-      updates.date !== undefined &&
-      !/^\d{4}-\d{2}-\d{2}$/.test(updates.date)
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Date must be in YYYY-MM-DD format." });
-    }
-    if (
-      updates.start_time !== undefined &&
-      updates.start_time !== null &&
-      !/^\d{2}:\d{2}$/.test(updates.start_time)
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Start time must be in HH:MM format or null." });
-    }
-    if (
-      updates.end_time !== undefined &&
-      updates.end_time !== null &&
-      !/^\d{2}:\d{2}$/.test(updates.end_time)
-    ) {
-      return res
-        .status(400)
-        .json({ message: "End time must be in HH:MM format or null." });
-    }
-    if (
-      updates.categories !== undefined &&
-      (!Array.isArray(updates.categories) ||
-        updates.categories.length === 0 ||
-        !updates.categories.every((cat: any) => typeof cat === "string"))
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Categories must be a non-empty array of strings." });
-    }
-    // Add more specific validations for other fields as needed
-    // For example, for string fields that shouldn't be empty if provided:
-    const stringFieldsToValidate: (keyof Event)[] = [
-      "description",
-      "longDescription",
-      "venue",
-      "location",
-      "address",
-      "organizer",
-      "imageUrl",
-      "priceRange",
-      "status",
-    ];
-    for (const field of stringFieldsToValidate) {
-      const snakeCaseField = field.replace(
-        /[A-Z]/g,
-        (letter) => `_${letter.toLowerCase()}`
-      ); // Convert camelCase to snake_case for request body
-      if (
-        updates[snakeCaseField] !== undefined &&
-        updates[snakeCaseField] !== null &&
-        typeof updates[snakeCaseField] !== "string"
-      ) {
-        return res
-          .status(400)
-          .json({ message: `${field} must be a string or null.` });
-      }
-    }
-    // --- End Validation ---
-
-    // Map request body (snake_case) to entity properties (camelCase)
-    const {
-      long_description,
-      start_time,
-      end_time,
-      image_url,
-      price_range,
-      ...otherUpdates
-    } = updates;
-    const mappedUpdates: Partial<Event> = { ...otherUpdates };
-    if (long_description !== undefined)
-      mappedUpdates.longDescription = long_description;
-    if (start_time !== undefined) mappedUpdates.startTime = start_time;
-    if (end_time !== undefined) mappedUpdates.endTime = end_time;
-    if (image_url !== undefined) mappedUpdates.imageUrl = image_url;
-    if (price_range !== undefined) mappedUpdates.priceRange = price_range;
-
-    // Merge and save
-    eventRepository.merge(event, mappedUpdates);
-    const updatedEvent = await eventRepository.save(event);
+    const updates = validateUpdateEventData(req.body);
+    const updatedEvent = await updateEventDB(getDataSource(), id, updates);
 
     return res.status(200).json({
       id: updatedEvent.id,
@@ -338,8 +238,11 @@ export const updateEventDetails = async (req: Request, res: Response) => {
       created_at: updatedEvent.createdAt.toISOString(),
       updated_at: updatedEvent.updatedAt.toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating event details for admin:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    if (error.message.includes("not found")) {
+      return res.status(404).json({ message: error.message });
+    }
+    return res.status(400).json({ message: error.message });
   }
 };
