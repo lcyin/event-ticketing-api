@@ -4,10 +4,11 @@ import { User } from "../entities/User";
 import bcrypt from "bcryptjs";
 import { generateToken, verifyToken } from "../utils/jwt";
 import { registerUser } from "../services/authService";
+import { loginUser } from "../services/authService";
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const user = await registerUser(req.body);
+    const user = await registerUser(getDataSource(), req.body);
     return res.status(201).json({
       id: user.id,
       email: user.email,
@@ -21,43 +22,14 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  // Basic validation
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+  try {
+    const loginResponse = await loginUser(getDataSource(), req.body);
+    return res.status(200).json(loginResponse);
+  } catch (error: any) {
+    return res
+      .status(error.statusCode || 500)
+      .json({ message: error.message || "Internal server error" });
   }
-
-  const userRepo = getDataSource().getRepository(User);
-  const user = await userRepo.findOne({ where: { email } });
-
-  if (!user) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-  if (!isValidPassword) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  const token = generateToken({
-    id: user.id,
-    email: user.email,
-    role: user.role,
-  });
-
-  return res.status(200).json({
-    accessToken: token,
-    tokenType: "Bearer",
-    expiresIn: 3600, // 1 hour in seconds
-    user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-    },
-  });
 };
 
 export const logout = async (req: Request, res: Response) => {
