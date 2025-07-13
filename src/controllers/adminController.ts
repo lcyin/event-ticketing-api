@@ -2,9 +2,10 @@ import { Request, Response } from "express";
 import { getDataSource } from "../config/getDataSource";
 import { Event } from "../entities/Event";
 import { validate as isValidUUID } from "uuid";
-import { TicketType } from "../entities/TicketType";
 import { createEventDB } from "../services/eventService";
+import { createTicketTypeDB } from "../services/ticketTypeService";
 import { validateCreateEventData } from "../helpers/validate-create-event-data.helper";
+import { validateCreateTicketTypeData } from "../helpers/validate-create-ticket-type-data.helper";
 
 export const createEvent = async (req: Request, res: Response) => {
   const eventData = validateCreateEventData(req.body);
@@ -42,66 +43,32 @@ export const createEvent = async (req: Request, res: Response) => {
 };
 
 export const createTicketTypeForEvent = async (req: Request, res: Response) => {
+  const { eventId } = req.params;
+
+  if (!isValidUUID(eventId)) {
+    return res.status(400).json({ message: "Invalid event ID format." });
+  }
+
   try {
-    const { eventId } = req.params;
-    const { name, price, description, quantity } = req.body;
-
-    if (!isValidUUID(eventId)) {
-      return res.status(400).json({ message: "Invalid event ID format." });
-    }
-
-    // Validate request body
-    if (!name || typeof name !== "string" || name.trim() === "") {
-      return res.status(400).json({
-        message: "Ticket type name is required and must be a non-empty string.",
-      });
-    }
-    if (price === undefined || typeof price !== "number" || price < 0) {
-      return res.status(400).json({
-        message: "Price is required and must be a non-negative number.",
-      });
-    }
-    if (
-      quantity === undefined ||
-      typeof quantity !== "number" ||
-      quantity < 0
-    ) {
-      return res.status(400).json({
-        message: "Quantity is required and must be a non-negative number.",
-      });
-    }
-    if (description && typeof description !== "string") {
-      return res.status(400).json({ message: "Description must be a string." });
-    }
-
-    const eventRepository = getDataSource().getRepository(Event);
-    const event = await eventRepository.findOneBy({ id: eventId });
-
-    if (!event) {
-      return res.status(404).json({ message: "Event not found." });
-    }
-
-    const ticketTypeRepository = getDataSource().getRepository(TicketType);
-    const newTicketType = ticketTypeRepository.create({
+    const ticketTypeData = validateCreateTicketTypeData(req.body);
+    const savedTicketType = await createTicketTypeDB(
+      getDataSource(),
       eventId,
-      name,
-      price,
-      description,
-      quantity,
-      event, // Associate with the found event
-    });
-
-    const savedTicketType = await ticketTypeRepository.save(newTicketType);
+      ticketTypeData
+    );
 
     return res.status(201).json({
       ...savedTicketType,
-      eventId: savedTicketType.eventId, // Ensure eventId is in the response
+      eventId: savedTicketType.eventId,
       createdAt: savedTicketType.createdAt.toISOString(),
       updatedAt: savedTicketType.updatedAt.toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating ticket type for event:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    if (error.message.includes("not found")) {
+      return res.status(404).json({ message: error.message });
+    }
+    return res.status(400).json({ message: error.message });
   }
 };
 
