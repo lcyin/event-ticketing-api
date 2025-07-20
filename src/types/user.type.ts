@@ -4,3 +4,8 @@ export interface IRegisterUser {
   firstName?: string;
   lastName?: string;
 }
+
+export interface IUpdateProfile {
+  firstName?: string;
+  lastName?: string;
+}
