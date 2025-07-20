@@ -1,6 +1,8 @@
-import { In } from "typeorm";
+import { DataSource, In } from "typeorm";
 import { getDataSource } from "../config/getDataSource";
 import { TicketType } from "../entities/TicketType";
+import { validate as isValidUUID } from "uuid";
+import { IAddItemToCart } from "../types/cart.type";
 
 /**
  * This is a simple in-memory cart store.
@@ -49,6 +51,7 @@ export const getCart = (userId: string): Cart => {
  * @returns The user's cart with details and subtotal.
  */
 export const getCartContents = async (
+  ds: DataSource,
   userId: string
 ): Promise<DetailedCart> => {
   const cart = getCart(userId);
@@ -100,18 +103,34 @@ export const getCartContents = async (
 /**
  * Adds an item to a user's cart, or updates its quantity if it already exists.
  * @param userId The ID of the user.
- * @param ticketTypeId The ID of the ticket type to add.
- * @param quantity The quantity to add.
+ * @param cartItem The item to add to the cart.
  * @returns The updated cart.
  * @throws An error if the ticket type is not found or if there is insufficient quantity.
  */
 export const addItemToCart = async (
+  ds: DataSource,
   userId: string,
-  ticketTypeId: string,
-  quantity: number
+  cartItem: IAddItemToCart
 ): Promise<Cart> => {
-  const ticketTypeRepository = getDataSource().getRepository(TicketType);
-  const ticketType = await ticketTypeRepository.findOneBy({ id: ticketTypeId });
+  const { ticket_type_id, quantity } = cartItem;
+
+  if (!ticket_type_id || !isValidUUID(ticket_type_id)) {
+    const error = new Error("Invalid input: ticket_type_id is required.");
+    (error as any).statusCode = 400;
+    throw error;
+  }
+  if (!quantity || typeof quantity !== "number" || quantity <= 0) {
+    const error = new Error(
+      "Invalid input: quantity must be a positive integer."
+    );
+    (error as any).statusCode = 400;
+    throw error;
+  }
+
+  const ticketTypeRepository = ds.getRepository(TicketType);
+  const ticketType = await ticketTypeRepository.findOneBy({
+    id: ticket_type_id,
+  });
 
   if (!ticketType) {
     const error = new Error("Ticket type not found.");
@@ -121,14 +140,14 @@ export const addItemToCart = async (
 
   const cart = getCart(userId);
   const existingItem = cart.items.find(
-    (item) => item.ticket_type_id === ticketTypeId
+    (item) => item.ticket_type_id === ticket_type_id
   );
   const existingQuantity = existingItem ? existingItem.quantity : 0;
   const requestedTotalQuantity = existingQuantity + quantity;
 
   if (ticketType.quantity < requestedTotalQuantity) {
     const error = new Error(
-      `Not enough tickets available for ticket_type_id ${ticketTypeId}`
+      `Not enough tickets available for ticket_type_id ${ticket_type_id}`
     );
     (error as any).statusCode = 400;
     throw error;
@@ -137,7 +156,7 @@ export const addItemToCart = async (
   if (existingItem) {
     existingItem.quantity = requestedTotalQuantity;
   } else {
-    cart.items.push({ ticket_type_id: ticketTypeId, quantity });
+    cart.items.push({ ticket_type_id, quantity });
   }
 
   // Recalculate total items
