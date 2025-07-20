@@ -14,3 +14,11 @@ export interface IEvent {
   categories: string[];
   status?: "draft" | "published" | "cancelled";
 }
+
+export interface IGetPublicEventsQuery {
+  q?: string;
+  category?: string;
+  date?: string;
+  page?: string;
+  limit?: string;
+}
