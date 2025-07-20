@@ -17,3 +17,7 @@ export interface ILoginResponse {
     role: string;
   };
 }
+
+export interface IForgotPassword {
+  email: string;
+}

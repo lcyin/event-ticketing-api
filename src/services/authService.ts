@@ -1,7 +1,7 @@
 import { User } from "../entities/User";
 import bcrypt from "bcryptjs";
 import { IRegisterUser } from "../types/user.type";
-import { ILoginUser, ILoginResponse } from "../types/auth.type";
+import { ILoginUser, ILoginResponse, IForgotPassword } from "../types/auth.type";
 import { generateToken } from "../utils/jwt";
 import { DataSource } from "typeorm";
 
@@ -91,4 +91,36 @@ export const loginUser = async (
       role: user.role,
     },
   };
+};
+
+export const forgotPassword = async (
+  ds: DataSource,
+  userData: IForgotPassword
+): Promise<void> => {
+  const { email } = userData;
+
+  if (
+    !email ||
+    typeof email !== "string" ||
+    !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)
+  ) {
+    const error = new Error("Invalid email format");
+    (error as any).statusCode = 400;
+    throw error;
+  }
+
+  const userRepo = ds.getRepository(User);
+  const user = await userRepo.findOne({ where: { email } });
+
+  if (user) {
+    const resetToken = generateToken(
+      { id: user.id, email: user.email },
+      { expiresIn: "1h" }
+    );
+
+    // In a real application, you would send an email here
+    console.log(
+      `Password reset link for ${email}: ${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
+    );
+  }
 };
