@@ -21,3 +21,9 @@ export interface ILoginResponse {
 export interface IForgotPassword {
   email: string;
 }
+
+export interface IResetPassword {
+  token: string;
+  new_password: string;
+  confirm_new_password: string;
+}

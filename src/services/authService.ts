@@ -1,8 +1,8 @@
 import { User } from "../entities/User";
 import bcrypt from "bcryptjs";
 import { IRegisterUser } from "../types/user.type";
-import { ILoginUser, ILoginResponse, IForgotPassword } from "../types/auth.type";
-import { generateToken } from "../utils/jwt";
+import { ILoginUser, ILoginResponse, IForgotPassword, IResetPassword } from "../types/auth.type";
+import { generateToken, verifyToken } from "../utils/jwt";
 import { DataSource } from "typeorm";
 
 export const registerUser = async (ds: DataSource, userData: IRegisterUser) => {
@@ -122,5 +122,58 @@ export const forgotPassword = async (
     console.log(
       `Password reset link for ${email}: ${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
     );
+  }
+};
+
+export const resetPassword = async (
+  ds: DataSource,
+  userData: IResetPassword
+): Promise<void> => {
+  const { token, new_password, confirm_new_password } = userData;
+
+  if (!token || !new_password || !confirm_new_password) {
+    const error = new Error("All fields are required");
+    (error as any).statusCode = 400;
+    throw error;
+  }
+
+  if (new_password !== confirm_new_password) {
+    const error = new Error("Passwords do not match");
+    (error as any).statusCode = 400;
+    throw error;
+  }
+
+  if (typeof new_password !== "string" || new_password.length < 6) {
+    const error = new Error("Password must be at least 6 characters long");
+    (error as any).statusCode = 400;
+    throw error;
+  }
+
+  try {
+    const decoded = verifyToken(token);
+    if (!decoded.id || !decoded.email) {
+      const error = new Error("Invalid reset token");
+      (error as any).statusCode = 401;
+      throw error;
+    }
+
+    const userRepo = ds.getRepository(User);
+    const user = await userRepo.findOne({
+      where: { id: decoded.id, email: decoded.email },
+    });
+
+    if (!user) {
+      const error = new Error("Invalid reset token");
+      (error as any).statusCode = 401;
+      throw error;
+    }
+
+    const passwordHash = await bcrypt.hash(new_password, 10);
+    user.passwordHash = passwordHash;
+    await userRepo.save(user);
+  } catch (error) {
+    const newError = new Error("Invalid or expired reset token");
+    (newError as any).statusCode = 401;
+    throw newError;
   }
 };
